@@ -7,8 +7,8 @@ from typing import List
 from ..model.chip import _inner_point
 from ..model.floorplan import core_area, overlapping
 from ..model.parse import classify
-from .qt import (QBrush, QColor, QFont, QGraphicsItem, QGraphicsRectItem, QGraphicsSimpleTextItem, QPointF,
-                 QRectF, Qt, QTimer, QTransform)
+from .qt import (QBrush, QColor, QFont, QGraphicsItem, QGraphicsRectItem, QGraphicsSimpleTextItem, QPen,
+                 QPointF, QRectF, Qt, QTimer, QTransform)
 from .scene import fill_scene, make_pen, mono_family
 from .widgets import RingView
 
@@ -320,17 +320,28 @@ class ChipView(RingView):
             items.append(it)
             return it
 
-        legs = make_pen(TAPE, 1.5, [4, 3])               # Δx and Δy legs
-        add(sc.addLine(a.x(), a.y(), b.x(), a.y(), legs), 19)
-        add(sc.addLine(b.x(), a.y(), b.x(), b.y(), legs), 19)
-        add(sc.addLine(a.x(), a.y(), b.x(), b.y(), make_pen(TAPE_INK, 16)))   # band outline
-        add(sc.addLine(a.x(), a.y(), b.x(), b.y(), make_pen(TAPE, 13)))       # band
+        def pen(color, width_px, dash=None):
+            # widths in µm (not cosmetic): Qt repaints an item inside its bounding rect, which it
+            # computes in scene units; a cosmetic 13 px pen leaves traces when zoomed out
+            p = QPen(QColor(color))
+            p.setWidthF(width_px * px)
+            p.setCapStyle(Qt.PenCapStyle.FlatCap)
+            if dash:
+                p.setDashPattern(dash)
+            return p
+
+        legs = pen(TAPE, 1.5, [4, 3])                     # Δx and Δy legs
+        if dx and dy:  # only for a slanted tape
+            add(sc.addLine(a.x(), a.y(), b.x(), a.y(), legs), 19)
+            add(sc.addLine(b.x(), a.y(), b.x(), b.y(), legs), 19)
+        add(sc.addLine(a.x(), a.y(), b.x(), b.y(), pen(TAPE_INK, 16)))   # band outline
+        add(sc.addLine(a.x(), a.y(), b.x(), b.y(), pen(TAPE, 13)))       # band
         if d > 0:
             ux, uy = dx / d, dy / d                       # along the tape
             nx, ny = -uy, ux                              # across
             step = _nice_step(10 * px)                    # ticks at least 10 px apart
             major = step * (5 if str(step).lstrip("0.")[:1] == "2" else 10)
-            ink = make_pen(TAPE_INK, 1.2)
+            ink = pen(TAPE_INK, 1.2)
             k = 0
             while k * step <= d + 1e-9:
                 t = k * step
@@ -342,7 +353,7 @@ class ChipView(RingView):
             end = 11 * px
             for p in (a, b):
                 add(sc.addLine(p.x() - nx * end, p.y() - ny * end, p.x() + nx * end, p.y() + ny * end,
-                               make_pen(TAPE_INK, 2.5)), 21)
+                               pen(TAPE_INK, 2.5)), 21)
         text = f"{d:.1f} µm   Δx {abs(dx):.1f}  Δy {abs(dy):.1f}"
         box = QGraphicsRectItem()
         box.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations)
@@ -354,7 +365,7 @@ class ChipView(RingView):
         label.setBrush(QBrush(QColor(TAPE_INK)))
         br = label.boundingRect()
         box.setRect(QRectF(-6, -4, br.width() + 12, br.height() + 8))
-        box.setPen(make_pen(TAPE_INK, 1.5))
+        box.setPen(QPen(QColor(TAPE_INK), 1.5))  # ignores transformations: pixels are fine
         box.setBrush(QBrush(QColor(TAPE)))
         box.setPos(b.x() + 14 * px, b.y() + 10 * px)
         sc.addItem(box)

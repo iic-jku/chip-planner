@@ -474,5 +474,27 @@ class ChipGui(unittest.TestCase):
         self.assertEqual(w.pal, PALETTES["light"])
         self.assertEqual(main_window.load_view_settings()["theme"], "light")
 
+    def test_measure_tape_repaint_area_covers_the_band(self):
+        # Qt repaints an item only inside its bounding rect; with cosmetic pens (width in pixels)
+        # that rect is computed in µm, too small when zoomed out: moving the tape left traces
+        from chip_planner.gui.qt import QPointF
+        w = self.win
+        w.resize(1200, 800)
+        w.show()
+        w.measure_btn.setChecked(True)
+        self.app.processEvents()
+        w.view.zoom(0.25, False)
+        px = 1.0 / w.view.transform().m11()  # µm per pixel
+        self.assertGreater(px, 3.0)  # zoomed out, as in the overview
+        w.view.measure_line(QPointF(0, 500), QPointF(800, 500))  # horizontal tape
+        for it in w.view._measure[1]:
+            pen = it.pen() if hasattr(it, "pen") else None
+            if pen is None or pen.widthF() <= 0 or not hasattr(it, "line"):
+                continue
+            drawn = pen.widthF() * (px if pen.isCosmetic() else 1.0)
+            line = it.line()
+            if abs(line.y1() - line.y2()) < 1e-9:  # horizontal: the height must hold the pen
+                self.assertGreaterEqual(it.boundingRect().height() + 1e-6, drawn)
+
 if __name__ == "__main__":
     unittest.main()
