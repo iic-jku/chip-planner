@@ -133,6 +133,61 @@ class ProjectApi(unittest.TestCase):
         self.assertIn("Pads do not fit on the left side: 720 µm needed, 80 µm available", lay.warnings)
         self.assertIn("Pads do not fit on the top side: 740 µm needed, 460 µm available", lay.warnings)
 
+    def test_fixed_core_is_minimum(self):
+        p = cp.Project(sides={"L": ["A"]})
+        p.settings.fixed_core, p.settings.square = True, False
+        p.settings.core_width, p.settings.core_height = 1500.0, 1200.0
+        lay = p.layout()
+        H = lay.ring_depth
+        self.assertEqual((lay.die_width, lay.die_height), (1500 + 2 * H, 1200 + 2 * H))
+        self.assertTrue(lay.core_limited)
+        self.assertFalse(lay.fixed_die)
+        p.sides["T"] = ["X"] * 40  # the pads need more than the core: the die grows
+        lay = p.layout()
+        self.assertGreater(lay.die_width, 1500 + 2 * H)
+        self.assertEqual(lay.die_height, 1200 + 2 * H)
+        self.assertFalse(any("do not fit" in w for w in lay.warnings))
+
+    def test_fixed_core_square(self):
+        p = cp.Project(sides={"L": ["A"]})
+        p.settings.fixed_core = True
+        lay = p.layout()
+        self.assertEqual(lay.die_width, lay.die_height)
+        self.assertEqual(lay.die_width, 1500 + 2 * lay.ring_depth)
+
+    def test_fixed_core_with_pdk_adds_core_margin(self):
+        p = cp.Project(sides={"L": ["A [in]"]})
+        p.settings.pdk, p.settings.fixed_core, p.settings.square = "ihp-sg13g2", True, False
+        p.settings.core_width = 1501.0
+        lay = p.layout()
+        pdk = cp.get_pdk("ihp-sg13g2")
+        m = lay.ring_depth + lay.core_margin
+        self.assertEqual(lay.core_margin, pdk.core_margin)
+        self.assertGreaterEqual(lay.die_width, 1501 + 2 * m)
+        self.assertGreaterEqual(lay.die_height, 1200 + 2 * m)
+        self.assertEqual(lay.die_width % pdk.site, 0)
+        self.assertLess(lay.die_width, 1501 + 2 * m + pdk.site)
+
+    def test_fixed_die_wins_over_fixed_core(self):
+        p = cp.Project(sides={"L": ["A"]})
+        p.settings.fixed_die = p.settings.fixed_core = True
+        p.settings.die_width, p.settings.die_height = 900, 800
+        lay = p.layout()
+        self.assertEqual((lay.die_width, lay.die_height), (900, 800))
+        self.assertFalse(lay.core_limited)
+
+    def test_new_settings_round_trip_and_old_files(self):
+        p = cp.Project.example()
+        p.settings.fixed_core, p.settings.grid = True, 5.0
+        p.settings.core_width, p.settings.core_height = 800.0, 600.0
+        d = p.to_dict()
+        self.assertEqual((d["fixed_core"], d["core_w"], d["core_h"], d["grid"]), (True, 800.0, 600.0, 5.0))
+        self.assertEqual(cp.Project.from_dict(d), p)
+        old = cp.Project.from_dict({"sides": {}}).settings
+        self.assertEqual((old.fixed_core, old.core_width, old.core_height, old.grid), (False, 1500.0, 1200.0, 10.0))
+        bad = cp.Project.from_dict({"sides": {}, "core_w": "x", "grid": -1}).settings.sanitized()
+        self.assertEqual((bad.core_width, bad.grid), (1500.0, 10.0))
+
     def test_fixed_die_round_trip(self):
         p = cp.Project.example()
         p.settings.fixed_die = True

@@ -75,6 +75,8 @@ class Layout:
     margin: float                      # room for the pin names around the die
     prims: List[dict]                  # drawing primitives, see build_layout
     fixed_die: bool = False            # die size given by the settings, not by the pads
+    core_limited: bool = False         # fixed core size mode: the core size is the minimum
+    core_margin: float = 0.0           # IO ring to core area (core power ring), from the PDK
     side_space: Optional[Dict[str, float]] = None  # length available for pads per side
     ring_depth: float = 0.0            # die edge to the inner edge of the IO ring
     pdk: str = ""
@@ -161,11 +163,18 @@ def build_layout(project, selected=None):
             warnings.append(f"Fixed die size too small for the IO ring, using {e_tb + 2 * H:g} × {e_lr + 2 * H:g} µm"
                             if (e_tb + 2 * H, e_lr + 2 * H) != (dw, dh) else
                             f"Fixed die size snapped to the {pdk.site:g} µm grid: {dw:g} × {dh:g} µm")
-    elif square:
-        e_tb = e_lr = max(P, *S.values())
     else:
         e_tb = max(P, S["T"], S["B"])
         e_lr = max(P, S["L"], S["R"])
+        if cfg.fixed_core:
+            # the core (incl. the core margin of the PDK) is the minimum, the pads may need more
+            m = H + (pdk.core_margin if pdk else 0.0)
+            min_w, min_h = cfg.core_width + 2 * m, cfg.core_height + 2 * m
+            if pdk:
+                min_w, min_h = (math.ceil(v / pdk.site - 1e-9) * pdk.site for v in (min_w, min_h))
+            e_tb, e_lr = max(e_tb, min_w - 2 * H), max(e_lr, min_h - 2 * H)
+        if square:
+            e_tb = e_lr = max(e_tb, e_lr)
     W, Hh = e_tb + 2 * H, e_lr + 2 * H
     space = {s: e_tb if s in "TB" else e_lr for s in SIDES}
 
@@ -453,5 +462,7 @@ def build_layout(project, selected=None):
     return Layout(pins=pin_objs, die_width=W, die_height=Hh, core_width=core_w, core_height=core_h,
                   side_length=S, pins_per_side=per_side, counts=counts, warnings=warnings,
                   gutter=gutter, margin=margin, prims=prims, fixed_die=cfg.fixed_die, side_space=space,
+                  core_limited=cfg.fixed_core and not cfg.fixed_die,
+                  core_margin=pdk.core_margin if pdk else 0.0,
                   ring_depth=H, pdk=pdk.name if pdk else "", package=pkg.name if pkg else "",
                   domains=domains, splits=splits, unbonded_leads=unbonded)

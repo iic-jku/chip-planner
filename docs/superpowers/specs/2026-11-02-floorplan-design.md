@@ -102,8 +102,8 @@ a first padframe whose signal pads already sit on the right sides.
   next to `die_w`/`die_h`), edited in the Settings tab and the floorplan toolbar. Grid default in
   `Settings.grid` (JSON `grid`). The `floorplan` key holds only the macros.
 - **Core and die**: the floorplan core size sets the die via the planned *fixed core size* mode,
-  a third die-size mode next to pad-limited and fixed die (JSON `die_mode`: `"pads"`, `"die"`,
-  `"core"`; older files map `fixed_die` true/false to `"die"`/`"pads"`; `square` still applies).
+  a third die-size mode next to pad-limited and fixed die (`Settings.fixed_core`, JSON `fixed_core`;
+  `fixed_die` wins when both are set; `square` still applies).
   Generating the padframe switches the project to this mode after a confirmation. The floorplan view draws the ring depth from the current settings, so the
   flylines point to real die edges.
 - **Paths** in the project file are stored relative to the project file when possible.
