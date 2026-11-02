@@ -1,0 +1,60 @@
+# Demo macro for chip-planner (abstract only: size and pins)
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+UNITS
+  DATABASE MICRONS 1000 ;
+END UNITS
+
+MACRO lna_top
+  CLASS BLOCK ;
+  FOREIGN lna_top ;
+  ORIGIN 0.000 0.000 ;
+  SIZE 260.000 BY 200.000 ;
+  PIN RFIN
+    DIRECTION INPUT ;
+    USE ANALOG ;
+    PORT
+      LAYER Metal3 ;
+        RECT 258.000 99.000 260.000 101.000 ;
+    END
+  END RFIN
+  PIN RFOUT
+    DIRECTION OUTPUT ;
+    USE ANALOG ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 99.000 2.000 101.000 ;
+    END
+  END RFOUT
+  PIN EN
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 129.000 198.000 131.000 200.000 ;
+    END
+  END EN
+  PIN VDDA
+    DIRECTION INOUT ;
+    USE POWER ;
+    PORT
+      LAYER Metal3 ;
+        RECT 59.000 0.000 61.000 2.000 ;
+    END
+  END VDDA
+  PIN VSSA
+    DIRECTION INOUT ;
+    USE GROUND ;
+    PORT
+      LAYER Metal3 ;
+        RECT 199.000 0.000 201.000 2.000 ;
+    END
+  END VSSA
+  OBS
+    LAYER Metal1 ;
+      RECT 5.000 5.000 255.000 195.000 ;
+  END
+END lna_top
+
+END LIBRARY

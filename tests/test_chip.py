@@ -296,5 +296,19 @@ class EditTests(unittest.TestCase):
         self.assertEqual([m.y for m in p.floorplan.macros], [20.0, 20.0, 0.0])
 
 
+
+class DemoTests(unittest.TestCase):
+    def test_demo_project(self):
+        p = cp.load(ROOT / "examples" / "chip_demo.json")
+        self.assertEqual(p.load_warnings, [])
+        self.assertEqual([m.name for m in p.floorplan.macros], ["adc_sar0", "pll0", "lna0", "digital_core0"])
+        c = analyse(p)
+        self.assertEqual((c.crossings, [x.name for x in c.missing]), (1, ["CLK"]))  # left for the demo
+        optimize_pad_order(p)
+        add_missing_pads(p)
+        c = analyse(p)
+        self.assertEqual((c.crossings, c.missing), (0, []))
+        self.assertIn("macros.yaml", cp.librelane_files(p))
+
 if __name__ == "__main__":
     unittest.main()

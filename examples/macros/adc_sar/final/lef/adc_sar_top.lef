@@ -1,0 +1,156 @@
+# Demo macro for chip-planner (abstract only: size and pins)
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+UNITS
+  DATABASE MICRONS 1000 ;
+END UNITS
+
+MACRO adc_sar_top
+  CLASS BLOCK ;
+  FOREIGN adc_sar_top ;
+  ORIGIN 0.000 0.000 ;
+  SIZE 420.000 BY 310.000 ;
+  PIN VIN_P
+    DIRECTION INPUT ;
+    USE ANALOG ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 229.000 2.000 231.000 ;
+    END
+  END VIN_P
+  PIN VIN_N
+    DIRECTION INPUT ;
+    USE ANALOG ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 109.000 2.000 111.000 ;
+    END
+  END VIN_N
+  PIN VREF
+    DIRECTION INPUT ;
+    USE ANALOG ;
+    PORT
+      LAYER Metal3 ;
+        RECT 119.000 0.000 121.000 2.000 ;
+    END
+  END VREF
+  PIN CLK
+    DIRECTION INPUT ;
+    USE CLOCK ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 269.000 420.000 271.000 ;
+    END
+  END CLK
+  PIN EN
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 239.000 420.000 241.000 ;
+    END
+  END EN
+  PIN DOUT[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 199.000 420.000 201.000 ;
+    END
+  END DOUT[0]
+  PIN DOUT[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 183.000 420.000 185.000 ;
+    END
+  END DOUT[1]
+  PIN DOUT[2]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 167.000 420.000 169.000 ;
+    END
+  END DOUT[2]
+  PIN DOUT[3]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 151.000 420.000 153.000 ;
+    END
+  END DOUT[3]
+  PIN DOUT[4]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 135.000 420.000 137.000 ;
+    END
+  END DOUT[4]
+  PIN DOUT[5]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 119.000 420.000 121.000 ;
+    END
+  END DOUT[5]
+  PIN DOUT[6]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 103.000 420.000 105.000 ;
+    END
+  END DOUT[6]
+  PIN DOUT[7]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 87.000 420.000 89.000 ;
+    END
+  END DOUT[7]
+  PIN DOUT[8]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 71.000 420.000 73.000 ;
+    END
+  END DOUT[8]
+  PIN DOUT[9]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 55.000 420.000 57.000 ;
+    END
+  END DOUT[9]
+  PIN VDDA
+    DIRECTION INOUT ;
+    USE POWER ;
+    PORT
+      LAYER Metal3 ;
+        RECT 59.000 308.000 61.000 310.000 ;
+    END
+  END VDDA
+  PIN VSSA
+    DIRECTION INOUT ;
+    USE GROUND ;
+    PORT
+      LAYER Metal3 ;
+        RECT 359.000 308.000 361.000 310.000 ;
+    END
+  END VSSA
+  OBS
+    LAYER Metal1 ;
+      RECT 5.000 5.000 415.000 305.000 ;
+  END
+END adc_sar_top
+
+END LIBRARY

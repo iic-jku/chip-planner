@@ -107,6 +107,11 @@ typing in a side editor keeps its own undo while it has the focus.
 The die follows the core size in *Fixed core size (minimum)* mode (set when the first macro is
 added): the die is at least core + IO ring (+ the PDK core margin) and grows with the pads.
 
+**Demo**: [examples/chip_demo.json](examples/chip_demo.json) uses the demo macros in
+[examples/macros/](examples/macros/) (abstract LEFs of an ADC, a PLL, an LNA and a digital core, in
+the LibreLane run layout `final/lef/<name>_top.lef`). It starts with one crossing and one missing pad:
+try *Optimize Pad Order* and *Add Missing Pads*.
+
 **LibreLane**: with macros, the LibreLane export also writes `macros.yaml` (`MACROS` with LEF/GDS and
 the instance locations, `i_chip_core.<instance>`), and `chip_core_template.sv` lists the instances
 to create in the core. *Export MACROS…* shows it.

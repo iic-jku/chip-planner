@@ -1,0 +1,480 @@
+{
+  "mode": "ccw",
+  "align": "center",
+  "square": false,
+  "cellh": 120.0,
+  "std": {
+    "pitch": 90,
+    "w": 60.0,
+    "h": 60.0
+  },
+  "rf": {
+    "pitch": 100.0,
+    "w": 70.0,
+    "h": 70.0
+  },
+  "fixed_die": false,
+  "die_w": 2000.0,
+  "die_h": 2000.0,
+  "pdk": "ihp-sg13g2",
+  "package": "",
+  "fixed_core": true,
+  "core_w": 1600.0,
+  "core_h": 1300.0,
+  "grid": 10.0,
+  "halo": 20.0,
+  "spacing": 100.0,
+  "max_flyline": 900.0,
+  "max_supply_dist": 1000.0,
+  "sides": {
+    "T": "REFCLK [in]\nVSSA [vss]\nVDDA [vdd]\nIOVSS\nIOVDD",
+    "R": "=== ANA\nIOVSS\nIOVDD\nVDDA [vdd]\nTEST_CLK [in]\nRFIN [gsg]\nVSSA [vss]",
+    "B": "=== DIG\nIOVDD\nIOVSS\nSPI_SCK [in]\nSPI_MOSI [in]\nSPI_MISO [out]\nSPI_CS_N [in]\nRST_N [in]\nGPIO[0] [io]\nGPIO[1] [io]\nGPIO[2] [io]\nGPIO[3] [io]\nVDD\nVSS",
+    "L": "VDDA [vdd]\nVIN_N [analog]\nVIN_P [analog]\nVREF [analog]\nVSSA [vss]\nIOVDD\nIOVSS"
+  },
+  "floorplan": {
+    "macros": [
+      {
+        "name": "adc_sar0",
+        "macro": "adc_sar_top",
+        "path": "macros/adc_sar",
+        "x": 60.0,
+        "y": 120.0,
+        "rot": 0,
+        "io": [
+          "VIN_P",
+          "VIN_N",
+          "VREF"
+        ],
+        "class": "sensitive",
+        "domain": "ANA",
+        "cache": {
+          "name": "adc_sar_top",
+          "w": 420.0,
+          "h": 310.0,
+          "pins": [
+            {
+              "name": "VIN_P",
+              "dir": "INPUT",
+              "use": "ANALOG",
+              "x": 1.0,
+              "y": 80.0
+            },
+            {
+              "name": "VIN_N",
+              "dir": "INPUT",
+              "use": "ANALOG",
+              "x": 1.0,
+              "y": 200.0
+            },
+            {
+              "name": "VREF",
+              "dir": "INPUT",
+              "use": "ANALOG",
+              "x": 120.0,
+              "y": 309.0
+            },
+            {
+              "name": "CLK",
+              "dir": "INPUT",
+              "use": "CLOCK",
+              "x": 419.0,
+              "y": 40.0
+            },
+            {
+              "name": "EN",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 70.0
+            },
+            {
+              "name": "DOUT[0]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 110.0
+            },
+            {
+              "name": "DOUT[1]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 126.0
+            },
+            {
+              "name": "DOUT[2]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 142.0
+            },
+            {
+              "name": "DOUT[3]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 158.0
+            },
+            {
+              "name": "DOUT[4]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 174.0
+            },
+            {
+              "name": "DOUT[5]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 190.0
+            },
+            {
+              "name": "DOUT[6]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 206.0
+            },
+            {
+              "name": "DOUT[7]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 222.0
+            },
+            {
+              "name": "DOUT[8]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 238.0
+            },
+            {
+              "name": "DOUT[9]",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 419.0,
+              "y": 254.0
+            },
+            {
+              "name": "VDDA",
+              "dir": "INOUT",
+              "use": "POWER",
+              "x": 60.0,
+              "y": 1.0
+            },
+            {
+              "name": "VSSA",
+              "dir": "INOUT",
+              "use": "GROUND",
+              "x": 360.0,
+              "y": 1.0
+            }
+          ]
+        }
+      },
+      {
+        "name": "pll0",
+        "macro": "pll_top",
+        "path": "macros/pll",
+        "x": 1220.0,
+        "y": 60.0,
+        "rot": 0,
+        "io": [
+          "REFCLK"
+        ],
+        "class": "noisy",
+        "domain": "ANA",
+        "cache": {
+          "name": "pll_top",
+          "w": 300.0,
+          "h": 300.0,
+          "pins": [
+            {
+              "name": "REFCLK",
+              "dir": "INPUT",
+              "use": "CLOCK",
+              "x": 150.0,
+              "y": 1.0
+            },
+            {
+              "name": "CLKOUT",
+              "dir": "OUTPUT",
+              "use": "CLOCK",
+              "x": 1.0,
+              "y": 150.0
+            },
+            {
+              "name": "LOCK",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 220.0
+            },
+            {
+              "name": "VDDA",
+              "dir": "INOUT",
+              "use": "POWER",
+              "x": 60.0,
+              "y": 299.0
+            },
+            {
+              "name": "VSSA",
+              "dir": "INOUT",
+              "use": "GROUND",
+              "x": 240.0,
+              "y": 299.0
+            }
+          ]
+        }
+      },
+      {
+        "name": "lna0",
+        "macro": "lna_top",
+        "path": "macros/lna",
+        "x": 1280.0,
+        "y": 560.0,
+        "rot": 0,
+        "io": [
+          "RFIN"
+        ],
+        "class": "sensitive",
+        "domain": "ANA",
+        "cache": {
+          "name": "lna_top",
+          "w": 260.0,
+          "h": 200.0,
+          "pins": [
+            {
+              "name": "RFIN",
+              "dir": "INPUT",
+              "use": "ANALOG",
+              "x": 259.0,
+              "y": 100.0
+            },
+            {
+              "name": "RFOUT",
+              "dir": "OUTPUT",
+              "use": "ANALOG",
+              "x": 1.0,
+              "y": 100.0
+            },
+            {
+              "name": "EN",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 130.0,
+              "y": 1.0
+            },
+            {
+              "name": "VDDA",
+              "dir": "INOUT",
+              "use": "POWER",
+              "x": 60.0,
+              "y": 199.0
+            },
+            {
+              "name": "VSSA",
+              "dir": "INOUT",
+              "use": "GROUND",
+              "x": 200.0,
+              "y": 199.0
+            }
+          ]
+        }
+      },
+      {
+        "name": "digital_core0",
+        "macro": "digital_core_top",
+        "path": "macros/digital_core",
+        "x": 420.0,
+        "y": 820.0,
+        "rot": 0,
+        "io": [
+          "SPI_SCK",
+          "SPI_MOSI",
+          "SPI_MISO",
+          "SPI_CS_N",
+          "RST_N",
+          "GPIO[0]",
+          "GPIO[1]",
+          "GPIO[2]",
+          "GPIO[3]",
+          "CLK"
+        ],
+        "class": "noisy",
+        "domain": "DIG",
+        "cache": {
+          "name": "digital_core_top",
+          "w": 640.0,
+          "h": 420.0,
+          "pins": [
+            {
+              "name": "SPI_SCK",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 120.0,
+              "y": 419.0
+            },
+            {
+              "name": "SPI_MOSI",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 200.0,
+              "y": 419.0
+            },
+            {
+              "name": "SPI_MISO",
+              "dir": "OUTPUT",
+              "use": "SIGNAL",
+              "x": 280.0,
+              "y": 419.0
+            },
+            {
+              "name": "SPI_CS_N",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 360.0,
+              "y": 419.0
+            },
+            {
+              "name": "RST_N",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 440.0,
+              "y": 419.0
+            },
+            {
+              "name": "CLK",
+              "dir": "INPUT",
+              "use": "CLOCK",
+              "x": 1.0,
+              "y": 60.0
+            },
+            {
+              "name": "GPIO[0]",
+              "dir": "INOUT",
+              "use": "SIGNAL",
+              "x": 500.0,
+              "y": 419.0
+            },
+            {
+              "name": "GPIO[1]",
+              "dir": "INOUT",
+              "use": "SIGNAL",
+              "x": 530.0,
+              "y": 419.0
+            },
+            {
+              "name": "GPIO[2]",
+              "dir": "INOUT",
+              "use": "SIGNAL",
+              "x": 560.0,
+              "y": 419.0
+            },
+            {
+              "name": "GPIO[3]",
+              "dir": "INOUT",
+              "use": "SIGNAL",
+              "x": 590.0,
+              "y": 419.0
+            },
+            {
+              "name": "ADC_D[0]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 120.0
+            },
+            {
+              "name": "ADC_D[1]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 140.0
+            },
+            {
+              "name": "ADC_D[2]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 160.0
+            },
+            {
+              "name": "ADC_D[3]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 180.0
+            },
+            {
+              "name": "ADC_D[4]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 200.0
+            },
+            {
+              "name": "ADC_D[5]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 220.0
+            },
+            {
+              "name": "ADC_D[6]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 240.0
+            },
+            {
+              "name": "ADC_D[7]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 260.0
+            },
+            {
+              "name": "ADC_D[8]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 280.0
+            },
+            {
+              "name": "ADC_D[9]",
+              "dir": "INPUT",
+              "use": "SIGNAL",
+              "x": 1.0,
+              "y": 300.0
+            },
+            {
+              "name": "ADC_CLK",
+              "dir": "OUTPUT",
+              "use": "CLOCK",
+              "x": 1.0,
+              "y": 340.0
+            },
+            {
+              "name": "VDD",
+              "dir": "INOUT",
+              "use": "POWER",
+              "x": 639.0,
+              "y": 100.0
+            },
+            {
+              "name": "VSS",
+              "dir": "INOUT",
+              "use": "GROUND",
+              "x": 639.0,
+              "y": 320.0
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

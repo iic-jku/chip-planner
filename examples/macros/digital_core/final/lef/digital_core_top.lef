@@ -1,0 +1,204 @@
+# Demo macro for chip-planner (abstract only: size and pins)
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+UNITS
+  DATABASE MICRONS 1000 ;
+END UNITS
+
+MACRO digital_core_top
+  CLASS BLOCK ;
+  FOREIGN digital_core_top ;
+  ORIGIN 0.000 0.000 ;
+  SIZE 640.000 BY 420.000 ;
+  PIN SPI_SCK
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 119.000 0.000 121.000 2.000 ;
+    END
+  END SPI_SCK
+  PIN SPI_MOSI
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 199.000 0.000 201.000 2.000 ;
+    END
+  END SPI_MOSI
+  PIN SPI_MISO
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 279.000 0.000 281.000 2.000 ;
+    END
+  END SPI_MISO
+  PIN SPI_CS_N
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 359.000 0.000 361.000 2.000 ;
+    END
+  END SPI_CS_N
+  PIN RST_N
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 439.000 0.000 441.000 2.000 ;
+    END
+  END RST_N
+  PIN CLK
+    DIRECTION INPUT ;
+    USE CLOCK ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 359.000 2.000 361.000 ;
+    END
+  END CLK
+  PIN GPIO[0]
+    DIRECTION INOUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 499.000 0.000 501.000 2.000 ;
+    END
+  END GPIO[0]
+  PIN GPIO[1]
+    DIRECTION INOUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 529.000 0.000 531.000 2.000 ;
+    END
+  END GPIO[1]
+  PIN GPIO[2]
+    DIRECTION INOUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 559.000 0.000 561.000 2.000 ;
+    END
+  END GPIO[2]
+  PIN GPIO[3]
+    DIRECTION INOUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 589.000 0.000 591.000 2.000 ;
+    END
+  END GPIO[3]
+  PIN ADC_D[0]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 299.000 2.000 301.000 ;
+    END
+  END ADC_D[0]
+  PIN ADC_D[1]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 279.000 2.000 281.000 ;
+    END
+  END ADC_D[1]
+  PIN ADC_D[2]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 259.000 2.000 261.000 ;
+    END
+  END ADC_D[2]
+  PIN ADC_D[3]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 239.000 2.000 241.000 ;
+    END
+  END ADC_D[3]
+  PIN ADC_D[4]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 219.000 2.000 221.000 ;
+    END
+  END ADC_D[4]
+  PIN ADC_D[5]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 199.000 2.000 201.000 ;
+    END
+  END ADC_D[5]
+  PIN ADC_D[6]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 179.000 2.000 181.000 ;
+    END
+  END ADC_D[6]
+  PIN ADC_D[7]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 159.000 2.000 161.000 ;
+    END
+  END ADC_D[7]
+  PIN ADC_D[8]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 139.000 2.000 141.000 ;
+    END
+  END ADC_D[8]
+  PIN ADC_D[9]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 119.000 2.000 121.000 ;
+    END
+  END ADC_D[9]
+  PIN ADC_CLK
+    DIRECTION OUTPUT ;
+    USE CLOCK ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 79.000 2.000 81.000 ;
+    END
+  END ADC_CLK
+  PIN VDD
+    DIRECTION INOUT ;
+    USE POWER ;
+    PORT
+      LAYER Metal3 ;
+        RECT 638.000 319.000 640.000 321.000 ;
+    END
+  END VDD
+  PIN VSS
+    DIRECTION INOUT ;
+    USE GROUND ;
+    PORT
+      LAYER Metal3 ;
+        RECT 638.000 99.000 640.000 101.000 ;
+    END
+  END VSS
+  OBS
+    LAYER Metal1 ;
+      RECT 5.000 5.000 635.000 415.000 ;
+  END
+END digital_core_top
+
+END LIBRARY

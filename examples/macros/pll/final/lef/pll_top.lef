@@ -1,0 +1,60 @@
+# Demo macro for chip-planner (abstract only: size and pins)
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+UNITS
+  DATABASE MICRONS 1000 ;
+END UNITS
+
+MACRO pll_top
+  CLASS BLOCK ;
+  FOREIGN pll_top ;
+  ORIGIN 0.000 0.000 ;
+  SIZE 300.000 BY 300.000 ;
+  PIN REFCLK
+    DIRECTION INPUT ;
+    USE CLOCK ;
+    PORT
+      LAYER Metal3 ;
+        RECT 149.000 298.000 151.000 300.000 ;
+    END
+  END REFCLK
+  PIN CLKOUT
+    DIRECTION OUTPUT ;
+    USE CLOCK ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 149.000 2.000 151.000 ;
+    END
+  END CLKOUT
+  PIN LOCK
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 79.000 2.000 81.000 ;
+    END
+  END LOCK
+  PIN VDDA
+    DIRECTION INOUT ;
+    USE POWER ;
+    PORT
+      LAYER Metal3 ;
+        RECT 59.000 0.000 61.000 2.000 ;
+    END
+  END VDDA
+  PIN VSSA
+    DIRECTION INOUT ;
+    USE GROUND ;
+    PORT
+      LAYER Metal3 ;
+        RECT 239.000 0.000 241.000 2.000 ;
+    END
+  END VSSA
+  OBS
+    LAYER Metal1 ;
+      RECT 5.000 5.000 295.000 295.000 ;
+  END
+END pll_top
+
+END LIBRARY
