@@ -130,7 +130,7 @@ class GuiSmoke(unittest.TestCase):
 
     def test_layout_of_window(self):
         tabs = [self.win.tabs.tabText(i) for i in range(self.win.tabs.count())]
-        self.assertEqual(tabs, ["Padframe", "Pin List", "Settings", "LibreLane"])
+        self.assertEqual(tabs, ["Floorplan", "Padframe", "Pin List", "Settings", "LibreLane"])
         for mode in ("ccw", "cw"):
             self.win.cb_mode.setCurrentIndex(self.win.cb_mode.findData(mode))
             self.win.render()
@@ -155,3 +155,93 @@ class GuiSmoke(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
+
+
+@unittest.skipIf(main_window is None, "Qt not installed")
+class FloorplanGui(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        import chip_planner as cp
+        self.tmp = tempfile.TemporaryDirectory()
+        main_window.LAST_STATE = Path(self.tmp.name) / "last.json"
+        self.win = main_window.MainWindow(PALETTES["light"])
+        self.win.set_project(cp.Project())
+
+    def tearDown(self):
+        self.win.setWindowModified(False)
+        self.win.close()
+        self.tmp.cleanup()
+
+    def test_starts_on_padframe_and_switches_left_panel(self):
+        w = self.win
+        self.assertEqual(w.tabs.tabText(w.tabs.currentIndex()), "Padframe")
+        self.assertIs(w.left_stack.currentWidget(), w.editor_page)
+        w.tabs.setCurrentWidget(w.fp_page)
+        self.assertIs(w.left_stack.currentWidget(), w.macro_panel)
+        w.tabs.setCurrentWidget(w.ll_page)
+        self.assertIs(w.left_stack.currentWidget(), w.editor_page)
+
+    def test_add_macro_mark_pin_and_generate(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        w.add_macro_dir(str(MACRO_DIR))
+        self.assertEqual([m.name for m in w.floorplan.macros], ["adc_sar0", "adc_sar1"])
+        w.render()
+        self.assertEqual(len(w.macro_items), 2)
+        self.assertEqual(len(w.macro_panel.boxes), 2)
+        w.floorplan.macros[1].x = 800.0
+        w.floorplan.macros[0].io.append("VIN_P")
+        w.render()
+        self.assertEqual(w.fp_stat["io"].text(), "0/0/0/1")
+        self.assertEqual(w.generate_padframe(confirm=False), ["VIN_P"])
+        self.assertIn("VIN_P [analog]", w.editors["L"].text().split("\n"))
+        self.assertTrue(w.get_project().settings.fixed_core)
+        self.assertEqual(w.cb_die.currentData(), "core")
+        self.assertEqual(w.tabs.tabText(w.tabs.currentIndex()), "Padframe")
+
+    def test_drag_snaps_to_grid_and_stays_in_core(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        w.sp_grid.setValue(10)
+        w.render()
+        item = w.macro_items[0]
+        x0, y0 = item.ctx["origin"]
+        item.setPos(x0 + 123.4, y0 + 56.7)
+        m = w.floorplan.macros[0]
+        self.assertEqual((m.x, m.y), (120.0, 60.0))
+        item.setPos(x0 + 5000, y0 - 50)
+        self.assertEqual((m.x, m.y), (1500.0 - 420.0, 0.0))
+
+    def test_rotate_duplicate_remove(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        m = w.floorplan.macros[0]
+        w.rotate_macro(m)
+        self.assertEqual((m.rot, m.size()), (90, (310.0, 420.0)))
+        w.duplicate_macro(m)
+        self.assertEqual([x.name for x in w.floorplan.macros], ["adc_sar0", "adc_sar1"])
+        self.assertEqual(w.floorplan.macros[1].rot, 90)
+        w.remove_macro(m)
+        self.assertEqual([x.name for x in w.floorplan.macros], ["adc_sar1"])
+
+    def test_floorplan_round_trip_through_project(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        w.floorplan.macros[0].io.append("CLK")
+        p = w.get_project()
+        self.assertEqual(p.floorplan.macros[0].io, ["CLK"])
+        p.floorplan.macros[0].io.append("VIN_N")  # the window keeps its own copy
+        self.assertEqual(w.floorplan.macros[0].io, ["CLK"])
+        w.set_project(p)
+        self.assertEqual(w.get_project().floorplan, p.floorplan)
+
+    def test_placeholder(self):
+        w = self.win
+        w.add_placeholder("digital", 600.0, 400.0)
+        self.assertTrue(w.floorplan.macros[0].placeholder)
+        self.assertEqual(w.floorplan.macros[0].size(), (600.0, 400.0))

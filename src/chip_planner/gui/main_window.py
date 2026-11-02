@@ -1,21 +1,26 @@
-"""Main window: side editors, preview, pin list, settings and LibreLane output."""
+"""Main window: floorplan, side editors, padframe preview, pin list, settings and LibreLane output."""
 
+import copy
 import os
 from pathlib import Path
 
 from .. import APP_NAME
 from ..formats import pinlist, project_file, svg
 from ..formats.librelane import export_librelane, librelane_files
+from ..model.floorplan import (Floorplan, Macro, MacroDef, floorplan_warnings, generate_pads, io_signals,
+                               utilization)
 from ..model.constants import FUNCTION_NAMES, FUNCTIONS, ORDER, SIDE_NAMES, SIDES, TYPE_NAMES, TYPES
 from ..model.parse import format_entry, parse_line, split_lines
 from ..model.pdk import get_package, get_pdk, package_names, pdk_names
 from ..model.project import PadSettings, Project, Settings
 from ..style import EXPORT_PALETTE
+from .floorplan_view import fill_floorplan
+from .macro_panel import MacroPanel
 from .qt import (QAbstractItemView, QAction, QApplication, QBrush, QCheckBox, QColor, QComboBox,
-                 QFileDialog, QFrame, QGraphicsScene, QGridLayout, QGroupBox, QHBoxLayout, QImage,
+                 QFileDialog, QFrame, QGraphicsScene, QGridLayout, QGroupBox, QHBoxLayout, QImage, QInputDialog,
                  QKeySequence, QLabel, QMainWindow, QMessageBox, QPainter, QPlainTextEdit, QPushButton, QRectF,
-                 QSplitter, Qt, QTableWidget, QTableWidgetItem, QTabWidget, QTextCursor, QTimer, QVBoxLayout,
-                 QWidget)
+                 QSplitter, QStackedWidget, Qt, QTableWidget, QTableWidgetItem, QTabWidget, QTextCursor, QTimer,
+                 QVBoxLayout, QWidget)
 from .scene import fill_scene, mono_family
 from .widgets import RingView, SideEditor, spin
 
@@ -42,6 +47,9 @@ class MainWindow(QMainWindow):
         self.selected = None
         self.layout_data = None
         self.project = None
+        self.floorplan = Floorplan()
+        self.macro_items = []
+        self.fp_warnings = []  # from reading the macro LEFs
         self._loading = False
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
@@ -99,7 +107,15 @@ class MainWindow(QMainWindow):
         hint.setStyleSheet(f"color: {pal['muted']};")
         lv.addWidget(hint)
 
-        splitter.addWidget(left)
+        # left on the Floorplan tab: the macro list instead of the side editors
+        self.editor_page = left
+        self.macro_panel = MacroPanel(pal, self.floorplan_changed, {
+            "add": self.add_macro, "placeholder": self.ask_placeholder, "reload": self.reload_macros,
+            "rotate": self.rotate_macro, "duplicate": self.duplicate_macro, "remove": self.remove_macro})
+        self.left_stack = QStackedWidget()
+        self.left_stack.addWidget(left)
+        self.left_stack.addWidget(self.macro_panel)
+        splitter.addWidget(self.left_stack)
 
         # right: tabs
         tabs = QTabWidget()
@@ -136,30 +152,18 @@ class MainWindow(QMainWindow):
         self.view = RingView(self.scene, self.pad_clicked, self.pad_hover)
         pvl.addWidget(self.view, 1)
 
-        stats = QHBoxLayout()
-        self.stat, self.stat_cap = {}, {}
-        for key, label in (("pads", "Pads"), ("die", "Die (pad-limited)"), ("area", "Area"),
-                           ("pg", "Power / Ground"), ("sig", "Analog / RF / Digital / Clock")):
-            box = QFrame()
-            box.setFrameShape(QFrame.Shape.StyledPanel)
-            bl = QVBoxLayout(box)
-            bl.setContentsMargins(10, 5, 10, 5)
-            bl.setSpacing(0)
-            cap = QLabel(label.upper())
-            cap.setStyleSheet(f"color: {pal['muted']}; font-size: 8pt;")
-            val = QLabel()
-            val.setStyleSheet(f"font-family: '{mono_family()}'; font-size: 12pt; font-weight: 600;")
-            bl.addWidget(cap)
-            bl.addWidget(val)
-            stats.addWidget(box, 1)
-            self.stat[key] = val
-            self.stat_cap[key] = cap
+        stats, self.stat, self.stat_cap = self._stat_tiles(
+            (("pads", "Pads"), ("die", "Die (pad-limited)"), ("area", "Area"),
+             ("pg", "Power / Ground"), ("sig", "Analog / RF / Digital / Clock")))
         pvl.addLayout(stats)
         self.warn = QLabel()
         self.warn.setWordWrap(True)
         self.warn.setStyleSheet(f"color: {pal['warn']};")
         pvl.addWidget(self.warn)
+        self.fp_page = self._build_floorplan()
+        tabs.addTab(self.fp_page, "Floorplan")
         tabs.addTab(pv, "Padframe")
+        self.pv_page = pv
 
         pl = QWidget()
         pll = QVBoxLayout(pl)
@@ -190,8 +194,9 @@ class MainWindow(QMainWindow):
         tabs.addTab(self._build_settings(), "Settings")
         self.ll_page = self._build_librelane()
         tabs.addTab(self.ll_page, "LibreLane")
-        tabs.currentChanged.connect(lambda *_: self.update_librelane())
+        tabs.currentChanged.connect(self.tab_changed)
         self.tabs = tabs
+        tabs.setCurrentWidget(pv)
 
         self.cb_mode.currentIndexChanged.connect(self.mode_changed)
         self.cb_align.currentIndexChanged.connect(self.changed)
@@ -203,12 +208,89 @@ class MainWindow(QMainWindow):
         self.sp_die_h.valueChanged.connect(self.changed)
         for sp in (self.sp_core_w, self.sp_core_h, self.sp_grid):
             sp.valueChanged.connect(self.changed)
+        # the floorplan toolbar edits the same core size and grid as the Settings tab
+        for a, b in ((self.sp_core_w, self.fp_core_w), (self.sp_core_h, self.fp_core_h), (self.sp_grid, self.fp_grid)):
+            a.valueChanged.connect(lambda v, b=b: b.setValue(v))
+            b.valueChanged.connect(lambda v, a=a: a.setValue(v))
         self.sp_cellh.valueChanged.connect(self.changed)
         for s in self.sp.values():
             s.valueChanged.connect(self.changed)
 
         self.statusBar().showMessage("Click a pad to select its line · Ctrl+wheel zooms · "
                                      "middle mouse button pans")
+
+    def _stat_tiles(self, items):
+        stats, vals, caps = QHBoxLayout(), {}, {}
+        for key, label in items:
+            box = QFrame()
+            box.setFrameShape(QFrame.Shape.StyledPanel)
+            bl = QVBoxLayout(box)
+            bl.setContentsMargins(10, 5, 10, 5)
+            bl.setSpacing(0)
+            cap = QLabel(label.upper())
+            cap.setStyleSheet(f"color: {self.pal['muted']}; font-size: 8pt;")
+            val = QLabel()
+            val.setStyleSheet(f"font-family: '{mono_family()}'; font-size: 12pt; font-weight: 600;")
+            bl.addWidget(cap)
+            bl.addWidget(val)
+            stats.addWidget(box, 1)
+            vals[key], caps[key] = val, cap
+        return stats, vals, caps
+
+    def _build_floorplan(self):
+        pal = self.pal
+        page = QWidget()
+        fl = QVBoxLayout(page)
+        fl.setContentsMargins(6, 6, 6, 6)
+        bar = QHBoxLayout()
+        for t in ("ana", "rf", "clk", "dig"):
+            fill, outline = pal["types"][t]
+            sw = QLabel()
+            sw.setFixedSize(13, 13)
+            sw.setStyleSheet(f"background: {fill}; border: 2px solid {outline}; border-radius: 2px;")
+            bar.addWidget(sw)
+            bar.addWidget(QLabel(TYPE_NAMES[t]))
+            bar.addSpacing(8)
+        bar.addStretch(1)
+        self.fp_core_w = spin(1500, maximum=50000.0)
+        self.fp_core_h = spin(1200, maximum=50000.0)
+        self.fp_grid = spin(10, maximum=1000.0)
+        self.fp_grid.setMinimum(0.1)
+        bar.addWidget(QLabel("Core"))
+        bar.addWidget(self.fp_core_w)
+        bar.addWidget(QLabel("×"))
+        bar.addWidget(self.fp_core_h)
+        bar.addSpacing(8)
+        bar.addWidget(QLabel("Grid"))
+        bar.addWidget(self.fp_grid)
+        self.chk_grid = QCheckBox("Show grid")
+        self.chk_grid.setChecked(True)
+        self.chk_grid.toggled.connect(lambda *_: self.render())
+        bar.addWidget(self.chk_grid)
+        bar.addSpacing(8)
+        gen = QPushButton("Generate Padframe →")
+        gen.clicked.connect(lambda: self.generate_padframe())
+        bar.addWidget(gen)
+        for text, fn in (("−", lambda: self.fp_view.zoom(1 / 1.25, False)),
+                         ("Fit", lambda: self.fp_view.fit()),
+                         ("+", lambda: self.fp_view.zoom(1.25, False))):
+            b = QPushButton(text)
+            if len(text) == 1:
+                b.setFixedWidth(32)
+            b.clicked.connect(fn)
+            bar.addWidget(b)
+        fl.addLayout(bar)
+        self.fp_scene = QGraphicsScene(self)
+        self.fp_view = RingView(self.fp_scene, lambda tag: None, lambda tag: None)
+        fl.addWidget(self.fp_view, 1)
+        stats, self.fp_stat, _ = self._stat_tiles(
+            (("core", "Core"), ("macros", "Macros"), ("util", "Utilization"), ("io", "IO signals (T/R/B/L)")))
+        fl.addLayout(stats)
+        self.fp_warn = QLabel()
+        self.fp_warn.setWordWrap(True)
+        self.fp_warn.setStyleSheet(f"color: {pal['warn']};")
+        fl.addWidget(self.fp_warn)
+        return page
 
     def _build_settings(self):
         pal = self.pal
@@ -351,6 +433,9 @@ class MainWindow(QMainWindow):
         act(mf, "Export Padframe as PNG…", self.export_png)
         act(mf, "Export LibreLane Files…", self.export_librelane_files)
         mf.addSeparator()
+        act(mf, "Add Macro…", self.add_macro)
+        act(mf, "Reload Macros", self.reload_macros, "F5")
+        mf.addSeparator()
         act(mf, "Load Example", self.load_example)
         mf.addSeparator()
         act(mf, "Quit", self.close, QKeySequence.StandardKey.Quit)
@@ -374,12 +459,15 @@ class MainWindow(QMainWindow):
             core_width=self.sp_core_w.value(), core_height=self.sp_core_h.value(), grid=self.sp_grid.value(),
             pdk=self.cb_pdk.currentData() or "", package=self.cb_pkg.currentData() or "",
         )
-        project = Project(settings)
+        project = Project(settings, floorplan=copy.deepcopy(self.floorplan))
         for s in SIDES:
             project.set_physical_lines(s, split_lines(self.editors[s].text()))
         return project
 
     def set_project(self, project):
+        self.floorplan = copy.deepcopy(project.floorplan)
+        self.fp_warnings = list(project.load_warnings)
+        self.macro_panel.set_floorplan(self.floorplan)
         st = project.settings.sanitized()
         self._loading = True
         try:
@@ -409,6 +497,7 @@ class MainWindow(QMainWindow):
         self.selected = None
         self.render()
         self.view.fit()
+        self.fp_view.fit()
 
     def changed(self, *_):
         if self._loading:
@@ -468,6 +557,146 @@ class MainWindow(QMainWindow):
         # The editors show physical order, so pads keep their place; only the numbering changes
         self.selected = None
         self.changed()
+
+    def tab_changed(self, *_):
+        on_fp = self.tabs.currentWidget() is self.fp_page
+        self.left_stack.setCurrentWidget(self.macro_panel if on_fp else self.editor_page)
+        if on_fp and self.fp_view.fit_mode:
+            self.fp_view.fit()
+        self.update_librelane()
+
+    # ---------- Floorplan ----------
+
+    def floorplan_changed(self, rebuild=True):
+        if rebuild:
+            self.macro_panel.set_floorplan(self.floorplan)
+        self.setWindowModified(True)
+        self.render()
+
+    def _ensure_core_mode(self):
+        # a floorplan needs a die around the core; pad-limited dies start from the pads only
+        if self.cb_die.currentData() == "pads":
+            self.cb_die.setCurrentIndex(self.cb_die.findData("core"))
+
+    def _place(self, m):
+        """Put a new macro to the right of the others when it fits, else at the core origin."""
+        w, _ = m.size()
+        right = max((o.x + o.size()[0] for o in self.floorplan.macros), default=None)
+        if right is not None:
+            g = self.sp_grid.value()
+            x = round((right + 5 * g) / g) * g
+            if x + w <= self.sp_core_w.value():
+                m.x = x
+
+    def add_macro(self):
+        path = QFileDialog.getExistingDirectory(self, "Add Macro (LibreLane run directory)",
+                                                str(self.file.parent) if self.file else "")
+        if path:
+            self.add_macro_dir(path)
+
+    def add_macro_dir(self, path):
+        name = self.floorplan.instance_name(Path(path).name)
+        try:
+            m = Macro.from_dir(str(Path(path).resolve()), name)
+        except (OSError, ValueError) as e:
+            QMessageBox.warning(self, "Add Macro", str(e))
+            return None
+        self._place(m)
+        self.floorplan.macros.append(m)
+        self._ensure_core_mode()
+        self.floorplan_changed()
+        return m
+
+    def ask_placeholder(self):
+        name, ok = QInputDialog.getText(self, "Add Placeholder", "Name:")
+        if not ok or not name.strip():
+            return
+        w, ok = QInputDialog.getDouble(self, "Add Placeholder", "Width [µm]:", 500.0, 1.0, 50000.0, 1)
+        if not ok:
+            return
+        h, ok = QInputDialog.getDouble(self, "Add Placeholder", "Height [µm]:", 500.0, 1.0, 50000.0, 1)
+        if ok:
+            self.add_placeholder(name.strip(), w, h)
+
+    def add_placeholder(self, name, w, h):
+        if any(m.name == name for m in self.floorplan.macros):
+            name = self.floorplan.instance_name(name)
+        m = Macro(name, cache=MacroDef(name, float(w), float(h)))
+        self._place(m)
+        self.floorplan.macros.append(m)
+        self._ensure_core_mode()
+        self.floorplan_changed()
+        return m
+
+    def reload_macros(self):
+        self.fp_warnings = self.floorplan.reload()
+        self.floorplan_changed()
+
+    def rotate_macro(self, m):
+        m.rot = (m.rot + 90) % 360
+        w, h = m.size()  # keep the top-left corner, stay inside the core
+        m.x = max(0.0, min(m.x, self.sp_core_w.value() - w))
+        m.y = max(0.0, min(m.y, self.sp_core_h.value() - h))
+        self.floorplan_changed()
+
+    def duplicate_macro(self, m):
+        d = copy.deepcopy(m)
+        d.cache = m.cache  # instances of one macro share the LEF values
+        d.name = self.floorplan.instance_name(Path(m.path).name if m.path else m.name.rstrip("0123456789") or m.name)
+        d.x += 10 * self.sp_grid.value()
+        d.y += 10 * self.sp_grid.value()
+        self.floorplan.macros.append(d)
+        self.floorplan_changed()
+        return d
+
+    def remove_macro(self, m):
+        self.floorplan.macros = [o for o in self.floorplan.macros if o is not m]
+        self.floorplan_changed()
+
+    def generate_padframe(self, confirm=True):
+        """Add pads for the marked macro pins (see :func:`generate_pads`); returns the added names."""
+        project = self.get_project()
+        if confirm and (not project.settings.fixed_core or any(project.sides[s] for s in SIDES)):
+            ans = QMessageBox.question(
+                self, "Generate Padframe",
+                "Add a pad for every marked macro pin that is not a pad yet? Existing lines stay as they are. "
+                "The die size switches to 'Fixed core size'.")
+            if ans != QMessageBox.StandardButton.Yes:
+                return []
+        added = generate_pads(project)
+        file, modified = self.file, self.isWindowModified()
+        self.set_project(project)
+        self.file = file
+        self.setWindowModified(modified or bool(added))
+        self.tabs.setCurrentWidget(self.pv_page)
+        self.statusBar().showMessage(f"Added {len(added)} pads: {', '.join(added)}" if added else
+                                     "No new pads: all marked pins are pads already", 8000)
+        return added
+
+    def _macro_released(self, m):
+        self.setWindowModified(True)
+        self.timer.start()
+
+    def _render_floorplan(self, project, lay):
+        fp_project = copy.copy(project)
+        fp_project.floorplan = self.floorplan  # the items move the macros of the window
+        self.macro_items = fill_floorplan(
+            self.fp_scene, fp_project, lay, self.pal, self.chk_grid.isChecked(),
+            on_move=lambda m: self.setWindowModified(True), on_release=self._macro_released,
+            on_rotate=self.rotate_macro)
+        if self.fp_view.fit_mode:
+            self.fp_view.fit()
+        st = project.settings.sanitized()
+        self.fp_stat["core"].setText(f"{st.core_width / 1000:.3f} × {st.core_height / 1000:.3f} mm")
+        self.fp_stat["macros"].setText(str(len(self.floorplan.macros)))
+        self.fp_stat["util"].setText(f"{100 * utilization(fp_project):.1f} %")
+        cnt = {s: 0 for s in SIDES}
+        for sig in io_signals(fp_project):
+            cnt[sig["side"]] += 1
+        self.fp_stat["io"].setText("/".join(str(cnt[s]) for s in SIDES))
+        warnings = self.fp_warnings + floorplan_warnings(fp_project)
+        self.fp_warn.setText("\n".join(warnings))
+        self.fp_warn.setVisible(bool(warnings))
 
     def _title(self):
         name = self.file.name if self.file else "Untitled"
@@ -541,6 +770,7 @@ class MainWindow(QMainWindow):
                     self.table.setCellWidget(r, COL["Drive"], self._drive_combo(p, pdk, drives))
         self.table.resizeColumnsToContents()
         self.table.blockSignals(False)
+        self._render_floorplan(project, lay)
         self.update_librelane()
 
     def _function_combo(self, p):

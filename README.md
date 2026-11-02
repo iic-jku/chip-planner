@@ -65,6 +65,27 @@ See [examples/ihp_sg13g2_domains.json](examples/ihp_sg13g2_domains.json). From t
 chip-planner export examples/ihp_sg13g2_domains.json --librelane flow/padring
 ```
 
+## Floorplan
+
+The *Floorplan* tab places hard macros in the core before the pad ring exists:
+
+- **Add Macro…** takes a LibreLane run directory, e.g. `macros/adc_sar/`. Size and pins come from
+  `final/lef/adc_sar_top.lef` (or the only `*.lef` in `final/lef/`). The project stores only the
+  path; the LEF is read again when the project opens and with *File → Reload Macros* (F5).
+  The same macro can be placed several times (`adc_sar0`, `adc_sar1`, …).
+- **Add Placeholder…** adds a box with name and size for a block that has no LEF yet.
+- Drag a macro to move it (it snaps to the grid, default 10 µm), double-click or *Rotate* turns it
+  by 90°. Overlapping macros and macros outside the core are marked and listed as warnings.
+- Check the pins that go off-chip. Each one gets a flyline to the nearest die edge.
+- **Generate Padframe →** adds a pad line for every checked pin that is not a pad yet, on the side
+  the flyline points to (function from the LEF direction, e.g. `VIN_P [analog]`, `DOUT[0] [out]`).
+  Existing lines are kept. Then add the supply pads in the side editors as usual.
+
+The core size and the grid are set in *Settings → Die* or in the floorplan toolbar. The floorplan
+uses the die size mode *Fixed core size (minimum)*: the die is at least core + IO ring (+ the core
+margin of the PDK) and grows when the pads need more room. The core is centred in the LibreLane
+`CORE_AREA`.
+
 ## Scripting
 
 The package works without Qt:
@@ -82,6 +103,11 @@ for pin in layout.pins:
 cp.export_csv(project, "pins.csv")
 cp.export_svg(project, "ring.svg")
 cp.save(project, "chip.json")
+
+macro = cp.Macro.from_dir("macros/adc_sar", "adc0")  # reads final/lef/adc_sar_top.lef
+macro.io = ["VIN_P", "VIN_N"]
+project.floorplan.macros.append(macro)
+cp.generate_pads(project)                            # adds VIN_P/VIN_N pads, fixed core mode
 ```
 
 `project.sides` holds each side in numbering order; `project.physical_lines(side)` and
