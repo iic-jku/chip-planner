@@ -71,6 +71,7 @@ def parse_line(line):
     if t.startswith(SPLIT_PREFIX):
         return {"split": True, "domain": t.strip("= \t")}
     typ = size = pitch = group = function = drive = None
+    lock = False
     while True:
         m = SIZE_RE.search(t)
         if m and m.start() > 0:
@@ -91,6 +92,8 @@ def parse_line(line):
                 group = k
             elif k in FUNCTION_TAGS:
                 function = FUNCTION_TAGS[k]
+            elif k == "lock":
+                lock = True
             elif DRIVE_RE.fullmatch(k):
                 drive = int(DRIVE_RE.fullmatch(k).group(1))
             else:
@@ -100,7 +103,7 @@ def parse_line(line):
         break
     name = t.strip()
     return {"split": False, "name": name, "type": typ, "auto": typ is None, "size": size,
-            "pitch": pitch, "group": group, "function": function, "drive": drive}
+            "pitch": pitch, "group": group, "function": function, "drive": drive, "lock": lock}
 
 
 def format_entry(e):
@@ -120,6 +123,8 @@ def format_entry(e):
         parts.append(f"{{{e['size'][0]:g}x{e['size'][1]:g}}}")
     if e["pitch"]:
         parts.append(f"@{e['pitch']:g}")
+    if e.get("lock"):
+        parts.append("[lock]")
     return " ".join(parts)
 
 

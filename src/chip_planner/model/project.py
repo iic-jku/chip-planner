@@ -44,6 +44,10 @@ class Settings:
     core_width: float = 1500.0   # core size in µm (floorplan core, LibreLane CORE_AREA)
     core_height: float = 1200.0
     grid: float = 10.0           # floorplan placement grid in µm
+    halo: float = 20.0           # default keep-out around macros in µm
+    spacing: float = 100.0       # minimum distance between sensitive and noisy macros
+    max_flyline: float = 900.0   # longest flyline of a sensitive pad
+    max_supply_dist: float = 1000.0  # macro centre to its nearest VDD/VSS pad
 
     def sanitized(self):
         """Copy with invalid numbers replaced by defaults (what the layout actually uses)."""
@@ -57,7 +61,9 @@ class Settings:
                         bool(self.fixed_die), num(self.die_width, 2000.0), num(self.die_height, 2000.0),
                         str(self.pdk or ""), str(self.package or ""), bool(self.fixed_core),
                         num(self.core_width, 1500.0), num(self.core_height, 1200.0),
-                        num(self.grid, 10.0, minimum=0.001))
+                        num(self.grid, 10.0, minimum=0.001), num(self.halo, 20.0, minimum=0.0),
+                        num(self.spacing, 100.0, minimum=0.0), num(self.max_flyline, 900.0),
+                        num(self.max_supply_dist, 1000.0))
 
 
 def text_to_lines(text):
@@ -136,6 +142,8 @@ class Project:
             "fixed_die": st.fixed_die, "die_w": st.die_width, "die_h": st.die_height,
             "pdk": st.pdk, "package": st.package,
             "fixed_core": st.fixed_core, "core_w": st.core_width, "core_h": st.core_height, "grid": st.grid,
+            "halo": st.halo, "spacing": st.spacing, "max_flyline": st.max_flyline,
+            "max_supply_dist": st.max_supply_dist,
             "sides": {s: self.side_text(s) for s in SIDES},
             **({"floorplan": self.floorplan.to_dict()} if self.floorplan.macros else {}),
         }
@@ -159,6 +167,10 @@ class Project:
             core_width=num(st["core_w"], 1500.0),
             core_height=num(st["core_h"], 1200.0),
             grid=num(st["grid"], 10.0, minimum=0.001),
+            halo=num(st["halo"], 20.0, minimum=0.0),
+            spacing=num(st["spacing"], 100.0, minimum=0.0),
+            max_flyline=num(st["max_flyline"], 900.0),
+            max_supply_dist=num(st["max_supply_dist"], 1000.0),
         )
         # Older versions ignored empty lines at the end of a side; drop them to keep the layout
         return cls(settings, {s: split_lines(str(st["sides"][s] or "")) for s in SIDES},
@@ -174,7 +186,7 @@ def normalize_state(st):
     base = default_state()
     out = dict(base)
     for k in ("mode", "align", "square", "cellh", "fixed_die", "die_w", "die_h", "pdk", "package",
-              "fixed_core", "core_w", "core_h", "grid"):
+              "fixed_core", "core_w", "core_h", "grid", "halo", "spacing", "max_flyline", "max_supply_dist"):
         if k in st:
             out[k] = st[k]
     if "std" in st:

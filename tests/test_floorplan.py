@@ -10,7 +10,7 @@ from tests import ROOT
 
 import chip_planner as cp
 from chip_planner.formats.lef import parse_lef, pick_macro, read_lef
-from chip_planner.model.floorplan import (Floorplan, Macro, MacroDef, MacroPin, core_origin, find_lef,
+from chip_planner.model.floorplan import (Floorplan, Macro, MacroDef, MacroPin, core_area, core_origin, find_lef,
                                           floorplan_warnings, generate_pads, io_signals, nearest_side,
                                           utilization)
 
@@ -95,17 +95,17 @@ class FloorplanTests(unittest.TestCase):
         self.assertEqual(nearest_side(1000, 5, 2000, 1000), "T")
         self.assertEqual(nearest_side(500, 500, 1000, 1000), "T")  # tie: T, R, B, L
 
-    def test_core_origin_centred_in_core_area(self):
+    def test_core_area(self):
         p = cp.Project(sides={"L": ["A"]})
         p.settings.fixed_core, p.settings.square = True, False
-        p.settings.core_width, p.settings.core_height = 1000.0, 800.0
         lay = p.layout()
-        self.assertEqual(core_origin(lay, p.settings), (lay.ring_depth, lay.ring_depth))
-        p.settings.fixed_core = False  # pad-limited, die larger than the core: centred
-        p.sides["T"] = ["X"] * 20
+        self.assertEqual(core_area(lay), (120.0, 120.0, 1500.0, 1200.0))
+        self.assertEqual(core_origin(lay, p.settings), (120.0, 120.0))
+        p.settings.pdk = "ihp-sg13g2"
         lay = p.layout()
-        x0, _ = core_origin(lay, p.settings)
-        self.assertAlmostEqual(x0, lay.ring_depth + (lay.die_width - 2 * lay.ring_depth - 1000.0) / 2)
+        m = lay.ring_depth + lay.core_margin
+        self.assertEqual(core_area(lay), (m, m, lay.die_width - 2 * m, lay.die_height - 2 * m))
+        self.assertGreater(lay.core_margin, 0)
 
     def test_overlap_and_outside_core_warning(self):
         p = cp.Project()
@@ -119,18 +119,9 @@ class FloorplanTests(unittest.TestCase):
         p.floorplan.macros[1].x = 500.0
         self.assertEqual(floorplan_warnings(p), [])
 
-    def test_core_larger_than_die_warning(self):
-        p = cp.Project()
-        p.settings.fixed_die = True
-        p.settings.die_width = p.settings.die_height = 1500.0
-        p.floorplan.macros = [adc()]
-        w = floorplan_warnings(p)
-        self.assertIn("Core 1500 × 1200 µm does not fit the core area of the die (1260 × 1260 µm)", w)
-        p.settings.fixed_die, p.settings.fixed_core = False, True
-        self.assertEqual(floorplan_warnings(p), [])
-
     def test_utilization(self):
         p = cp.Project()
+        p.settings.fixed_core = True
         p.settings.core_width, p.settings.core_height = 1000.0, 1000.0
         p.floorplan.macros = [adc(), Macro("d", cache=MacroDef("d", 100.0, 100.0))]
         self.assertAlmostEqual(utilization(p), (420 * 310 + 100 * 100) / 1e6)
@@ -139,6 +130,19 @@ class FloorplanTests(unittest.TestCase):
         fp = Floorplan([adc("adc_sar0")])
         self.assertEqual(fp.instance_name("adc_sar"), "adc_sar1")
         self.assertEqual(Floorplan().instance_name("pll"), "pll0")
+
+    def test_macro_fields_round_trip(self):
+        p = cp.Project()
+        m = adc("a0")
+        m.cls, m.halo, m.domain = "sensitive", 35.0, "ANA"
+        p.floorplan.macros = [m, adc("a1")]
+        d = p.to_dict()["floorplan"]["macros"]
+        self.assertEqual((d[0]["class"], d[0]["halo"], d[0]["domain"]), ("sensitive", 35.0, "ANA"))
+        self.assertNotIn("halo", d[1])
+        self.assertEqual(cp.Project.from_dict(p.to_dict()), p)
+        old = Macro.from_dict({"name": "x"})
+        self.assertEqual((old.cls, old.halo, old.domain), ("normal", None, ""))
+        self.assertEqual(Macro.from_dict({"name": "x", "class": "loud"}).cls, "normal")
 
     def test_json_round_trip(self):
         p = cp.Project.example()
@@ -246,6 +250,7 @@ class GenerateTests(unittest.TestCase):
 
     def test_sides_follow_rotation(self):
         p = self.project(adc(rot=90, io=["VIN_P"]))  # rotated: the left edge of the macro faces up
+        p.settings.fixed_core = True
         self.assertEqual(io_signals(p)[0]["side"], "T")
 
     def test_name_clash_between_instances(self):

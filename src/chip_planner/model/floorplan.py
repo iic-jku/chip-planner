@@ -31,6 +31,7 @@ class MacroDef:
 
 
 POWER_USES = ("POWER", "GROUND")
+MACRO_CLASSES = ("normal", "sensitive", "noisy")
 
 
 def _f(v, default=0.0):
@@ -56,6 +57,9 @@ class Macro:
     rot: int = 0
     io: List[str] = field(default_factory=list)
     cache: Optional[MacroDef] = None
+    cls: str = "normal"             # "normal", "sensitive" (analog/RF) or "noisy" (digital, clocks)
+    halo: Optional[float] = None    # keep-out in µm, None = settings default
+    domain: str = ""                # power domain (split name), "" = the whole ring
 
     @classmethod
     def from_dir(cls, path: str, name: str) -> "Macro":
@@ -91,7 +95,9 @@ class Macro:
 
     def to_dict(self):
         d = {"name": self.name, "macro": self.macro, "path": self.path, "x": self.x, "y": self.y,
-             "rot": self.rot, "io": list(self.io)}
+             "rot": self.rot, "io": list(self.io), "class": self.cls, "domain": self.domain}
+        if self.halo is not None:
+            d["halo"] = self.halo
         if self.cache:
             d["cache"] = {"name": self.cache.name, "w": self.cache.w, "h": self.cache.h,
                           "pins": [{"name": p.name, "dir": p.direction, "use": p.use, "x": p.x, "y": p.y}
@@ -108,8 +114,11 @@ class Macro:
                              _f(p.get("x")), _f(p.get("y"))) for p in c.get("pins", []) if isinstance(p, dict)]
             cache = MacroDef(str(c.get("name", "")), _f(c.get("w")), _f(c.get("h")), pins)
         rot = int(_f(d.get("rot"))) % 360
+        halo = d.get("halo")
         return cls(str(d["name"]), str(d.get("macro", "")), str(d.get("path", "")), _f(d.get("x")),
-                   _f(d.get("y")), rot - rot % 90, [str(n) for n in d.get("io", [])], cache)
+                   _f(d.get("y")), rot - rot % 90, [str(n) for n in d.get("io", [])], cache,
+                   d.get("class") if d.get("class") in MACRO_CLASSES else "normal",
+                   None if halo is None else max(0.0, _f(halo)), str(d.get("domain", "")))
 
 
 
@@ -179,13 +188,15 @@ def _read_macro(lef, path) -> MacroDef:
     return pick_macro(read_lef(lef), Path(path).name)
 
 
-def core_origin(layout, settings) -> Tuple[float, float]:
-    """Die coordinates of the top-left corner of the floorplan core, centred in the core area
-    (die minus IO ring and core margin, LibreLane CORE_AREA)."""
-    st = settings.sanitized()
+def core_area(layout) -> Tuple[float, float, float, float]:
+    """``(x0, y0, w, h)`` of the core area (LibreLane CORE_AREA): die minus IO ring and core margin."""
     m = layout.ring_depth + layout.core_margin
-    return (m + (layout.die_width - 2 * m - st.core_width) / 2,
-            m + (layout.die_height - 2 * m - st.core_height) / 2)
+    return m, m, layout.die_width - 2 * m, layout.die_height - 2 * m
+
+
+def core_origin(layout, settings=None) -> Tuple[float, float]:
+    """Die coordinates of the top-left corner of the core area (macro coordinates start here)."""
+    return core_area(layout)[:2]
 
 
 def nearest_side(x: float, y: float, die_w: float, die_h: float) -> str:
@@ -204,31 +215,25 @@ def overlapping(macros) -> List[Tuple[Macro, Macro]]:
     return [(a, b) for i, a in enumerate(macros) for b in macros[i + 1:] if _overlap(a, b)]
 
 
-def floorplan_warnings(project) -> List[str]:
-    st = project.settings.sanitized()
+def floorplan_warnings(project, layout=None) -> List[str]:
     macros = project.floorplan.macros
-    out = []
-    if macros:
-        lay = project.layout()
-        m = lay.ring_depth + lay.core_margin
-        aw, ah = lay.die_width - 2 * m, lay.die_height - 2 * m
-        if st.core_width > aw + 1e-6 or st.core_height > ah + 1e-6:
-            out.append(f"Core {st.core_width:g} × {st.core_height:g} µm does not fit the core area "
-                       f"of the die ({aw:g} × {ah:g} µm)")
-    out += [f"Macros {a.name} and {b.name} overlap" for a, b in overlapping(macros)]
+    if not macros:
+        return []
+    _, _, cw, ch = core_area(layout or project.layout())
+    out = [f"Macros {a.name} and {b.name} overlap" for a, b in overlapping(macros)]
     eps = 1e-6
     for m in macros:
         w, h = m.size()
-        if m.x < -eps or m.y < -eps or m.x + w > st.core_width + eps or m.y + h > st.core_height + eps:
+        if m.x < -eps or m.y < -eps or m.x + w > cw + eps or m.y + h > ch + eps:
             out.append(f"Macro {m.name} outside the core")
     return out
 
 
-def utilization(project) -> float:
+def utilization(project, layout=None) -> float:
     """Macro area / core area."""
-    st = project.settings.sanitized()
+    _, _, cw, ch = core_area(layout or project.layout())
     area = sum(w * h for w, h in (m.size() for m in project.floorplan.macros))
-    return area / (st.core_width * st.core_height)
+    return area / (cw * ch) if cw > 0 and ch > 0 else 0.0
 
 
 def _function(pin: MacroPin) -> Optional[str]:

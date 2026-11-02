@@ -6,6 +6,7 @@ from tests import ROOT
 
 import chip_planner as cp
 from chip_planner.model import parse_line
+from chip_planner.model.parse import format_entry
 
 BASELINE = json.loads((ROOT / "tests" / "data" / "layout_baseline.json").read_text(encoding="utf-8"))
 PIN_FIELDS = ("no", "name", "type", "side", "line", "w", "h", "pitch", "a", "b", "cx", "cy", "grouped")
@@ -187,6 +188,24 @@ class ProjectApi(unittest.TestCase):
         self.assertEqual((old.fixed_core, old.core_width, old.core_height, old.grid), (False, 1500.0, 1200.0, 10.0))
         bad = cp.Project.from_dict({"sides": {}, "core_w": "x", "grid": -1}).settings.sanitized()
         self.assertEqual((bad.core_width, bad.grid), (1500.0, 10.0))
+
+    def test_lock_tag(self):
+        e = parse_line("VDDIO [lock]")
+        self.assertEqual((e["name"], e["lock"]), ("VDDIO", True))
+        self.assertFalse(parse_line("VDDIO")["lock"])
+        e = parse_line("D[3] [lock] [out]")
+        self.assertEqual((e["name"], e["function"], e["lock"]), ("D[3]", "out", True))
+        self.assertEqual(format_entry(e), "D[3] [out] [lock]")
+
+    def test_check_settings_round_trip(self):
+        p = cp.Project()
+        st = p.settings
+        self.assertEqual((st.halo, st.spacing, st.max_flyline, st.max_supply_dist), (20.0, 100.0, 900.0, 1000.0))
+        st.halo, st.spacing, st.max_flyline, st.max_supply_dist = 0.0, 50.0, 700.0, 1200.0
+        d = p.to_dict()
+        self.assertEqual((d["halo"], d["spacing"], d["max_flyline"], d["max_supply_dist"]), (0.0, 50.0, 700.0, 1200.0))
+        self.assertEqual(cp.Project.from_dict(d), p)
+        self.assertEqual(cp.Project.from_dict({"sides": {}, "halo": -3}).settings.sanitized().halo, 20.0)
 
     def test_fixed_die_round_trip(self):
         p = cp.Project.example()
