@@ -260,34 +260,3 @@ def io_signals(project) -> List[dict]:
                     "name": p.name if count[p.name] == 1 else f"{m.name}_{p.name}",
                     "side": side, "pos": x if side in "TB" else y, "function": _function(p)})
     return out
-
-
-def generate_pads(project) -> List[str]:
-    """Add a pad line for every marked macro pin that is not a pad yet; returns the added names.
-
-    Switches the project to the fixed core size mode first, so the sides follow the floorplan.
-    New lines on an empty side are sorted by position; on a side with lines they are appended
-    at the physical end. Existing lines are never changed.
-    """
-    from .parse import parse_line
-
-    project.settings.fixed_core, project.settings.fixed_die = True, False
-    present = set()
-    for lines in project.sides.values():
-        for line in lines:
-            e = parse_line(line)
-            if e and not e.get("split"):
-                present.add(e["name"])
-    added = []
-    signals = sorted(io_signals(project), key=lambda s: s["pos"])
-    for side in ("T", "R", "B", "L"):
-        new = []
-        for s in signals:
-            if s["side"] == side and s["name"] not in present:
-                fn = s["function"]
-                new.append(f"{s['name']} [{'io' if fn == 'inout' else fn}]" if fn else s["name"])
-                present.add(s["name"])
-                added.append(s["name"])
-        if new:
-            project.set_physical_lines(side, project.physical_lines(side) + new)
-    return added

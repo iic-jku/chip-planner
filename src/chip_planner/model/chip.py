@@ -8,6 +8,7 @@ order (top/bottom left → right, left/right top → bottom), as in the side edi
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -291,3 +292,185 @@ def _suggest(project, layout, m, function, dom_pins, centre, splits) -> SupplySu
     side = nearest_side(cx, cy, layout.die_width, layout.die_height)
     return SupplySuggestion(m.name, name, function, side,
                             drop_index(layout, project, side, cx if side in "TB" else cy))
+
+
+# ---------- Edits (mutate the project; line indices in physical order) ----------
+
+def _is_locked(line) -> bool:
+    e = parse_line(line)
+    return bool(e and not e["split"] and e.get("lock"))
+
+
+def move_line(project, side, index, to_side, to_index) -> None:
+    """Move one editor line (pad, group, split or spacer) to ``to_index`` of ``to_side``.
+
+    ``to_index`` counts in the target side as it is before the move (what :func:`drop_index`
+    returns). A single pad drags its differential partner from the same side along (P before N).
+    Raises ``ValueError`` for a locked line.
+    """
+    src = project.physical_lines(side)
+    line = src[index]
+    if _is_locked(line):
+        raise ValueError(f"{parse_line(line)['name']} is locked")
+    e = parse_line(line)
+    partner = None
+    if e and not e["split"] and not e["group"]:
+        q = diff_partner(e["name"])
+        for j, other in enumerate(src):
+            o = parse_line(other)
+            if q and j != index and o and not o["split"] and not o["group"] and o["name"] == q \
+                    and not _is_locked(other):
+                partner = (j, other)
+                break
+    moved = [line]
+    remove = sorted([index] + ([partner[0]] if partner else []), reverse=True)
+    if partner:
+        moved = [line, partner[1]] if e["name"].endswith("P") else [partner[1], line]
+    dst = src if to_side == side else project.physical_lines(to_side)
+    if to_side == side:
+        to_index -= sum(1 for r in remove if r < to_index)
+    for r in remove:
+        src.pop(r)
+    dst[to_index:to_index] = moved
+    project.set_physical_lines(side, src)
+    if to_side != side:
+        project.set_physical_lines(to_side, dst)
+
+
+def toggle_lock(project, side, index) -> bool:
+    """Add or remove the ``[lock]`` tag of a pad line; returns the new state."""
+    lines = project.physical_lines(side)
+    e = parse_line(lines[index])
+    if not e or e["split"]:
+        raise ValueError("only pad lines can be locked")
+    if e.get("lock"):
+        lines[index] = re.sub(r"\s*\[lock\]", "", lines[index], flags=re.I).rstrip()
+    else:
+        lines[index] = lines[index].rstrip() + " [lock]"
+    project.set_physical_lines(side, lines)
+    return not e.get("lock")
+
+
+def optimize_pad_order(project) -> int:
+    """Sort the connected, unlocked pads of each side by the position of their macro pins.
+
+    They keep the set of slots they occupy; differential pairs are joined by swapping within
+    those slots only. Returns the number of lines that changed.
+    """
+    check = analyse(project)
+    changed = 0
+    for s in SIDES:
+        lines = project.physical_lines(s)
+        keys = {}
+        for f in check.flylines:
+            if f.side == s and not _is_locked(lines[f.line]) and f.line not in keys:
+                keys[f.line] = f.p[0] if s in "TB" else f.p[1]
+        slots = sorted(keys)
+        order = sorted(slots, key=lambda i: keys[i])
+        new = list(lines)
+        for slot, i in zip(slots, order):
+            new[slot] = lines[i]
+        slotset = set(slots)
+        for _ in range(len(slots)):  # join pairs by swapping within the slots, P before N
+            names = {parse_line(new[i])["name"]: i for i in slots}
+            todo = [(names[n], names[diff_partner(n)]) for n in names
+                    if n.endswith("P") and diff_partner(n) in names and names[diff_partner(n)] != names[n] + 1]
+            todo = [(i, j) for i, j in todo if j == i - 1 or i + 1 in slotset or i - 1 in slotset]
+            if not todo:
+                break
+            i, j = todo[0]
+            if j == i - 1:
+                new[i], new[j] = new[j], new[i]
+            elif i + 1 in slotset:
+                new[i + 1], new[j] = new[j], new[i + 1]
+            else:
+                p_line, n_line, displaced = new[i], new[j], new[i - 1]
+                new[i - 1], new[i], new[j] = p_line, n_line, displaced
+        changed += sum(1 for a, b in zip(lines, new) if a != b)
+        project.set_physical_lines(s, new)
+    return changed
+
+
+def add_missing_pads(project) -> List[str]:
+    """Insert a pad line for every checked macro pin without a pad, where its flyline points.
+
+    Switches the project to the fixed core size mode first (the sides follow the floorplan).
+    Lines are inserted by position; existing lines are never changed.
+    """
+    project.settings.fixed_core, project.settings.fixed_die = True, False
+    layout = project.layout()
+    missing = sorted(analyse(project, layout).missing, key=lambda m: m.pos)
+    added = []
+    for s in SIDES:
+        at = {}
+        for m in missing:
+            if m.side == s:
+                fn = m.function
+                text = f"{m.name} [{'io' if fn == 'inout' else fn}]" if fn else m.name
+                at.setdefault(drop_index(layout, project, s, m.pos), []).append(text)
+                added.append(m.name)
+        if at:
+            lines = project.physical_lines(s)
+            for i in sorted(at, reverse=True):
+                lines[i:i] = at[i]
+            project.set_physical_lines(s, lines)
+    order = {m.name: k for k, m in enumerate(missing)}
+    return sorted(added, key=order.get)
+
+
+def suggest_supply_pads(project) -> List[str]:
+    """Add VDD/VSS pads for macros that have none of their domain within reach; returns the names.
+
+    One pad at a time (a new pad can serve several macros); a suggestion that stays unsolved
+    after its pad was added is not tried again.
+    """
+    added, tried = [], set()
+    for _ in range(50):
+        todo = [s for s in analyse(project).supplies if (s.instance, s.function) not in tried]
+        if not todo:
+            break
+        s = todo[0]
+        tried.add((s.instance, s.function))
+        lines = project.physical_lines(s.side)
+        lines.insert(s.index, f"{s.name} [{s.function}]")
+        project.set_physical_lines(s.side, lines)
+        added.append(s.name)
+    return added
+
+
+def _clamp_into_core(m, layout):
+    _, _, cw, ch = core_area(layout)
+    w, h = m.size()
+    m.x = max(0.0, min(m.x, cw - w))
+    m.y = max(0.0, min(m.y, ch - h))
+
+
+def auto_rotate(project, instance) -> int:
+    """Rotate a macro to the rotation with the shortest total flyline length; returns it."""
+    m = next(x for x in project.floorplan.macros if x.name == instance)
+    layout = project.layout()
+    start = (m.rot, m.x, m.y)
+    best = None
+    for rot in [start[0]] + [r for r in (0, 90, 180, 270) if r != start[0]]:
+        m.rot, m.x, m.y = rot, start[1], start[2]
+        _clamp_into_core(m, layout)
+        total = sum(f.length for f in analyse(project, layout).flylines if f.instance == instance)
+        if best is None or total < best[0] - 1e-6:
+            best = (total, rot, m.x, m.y)
+    _, m.rot, m.x, m.y = best
+    return m.rot
+
+
+def align_macros(project, names, edge) -> None:
+    """Align the named macros to the leftmost left edge or the topmost top edge."""
+    ms = [m for m in project.floorplan.macros if m.name in names]
+    if edge == "left":
+        x = min(m.x for m in ms)
+        for m in ms:
+            m.x = x
+    elif edge == "top":
+        y = min(m.y for m in ms)
+        for m in ms:
+            m.y = y
+    else:
+        raise ValueError(f"unknown edge {edge!r}")

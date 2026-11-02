@@ -6,7 +6,8 @@ from tests import ROOT
 
 import chip_planner as cp
 from chip_planner.formats.lef import read_lef
-from chip_planner.model.chip import analyse, diff_partner, drop_index
+from chip_planner.model.chip import (add_missing_pads, align_macros, analyse, auto_rotate, diff_partner, drop_index,
+                                     move_line, optimize_pad_order, suggest_supply_pads, toggle_lock)
 from chip_planner.model.floorplan import Macro, MacroDef
 
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
@@ -24,7 +25,7 @@ def box(name, x, y, w=100.0, h=100.0, cls="normal"):
 
 def chip(sides=None, macros=()):
     """No PDK, fixed core 1500 × 1200: die 1740 × 1440, core area from (120, 120)."""
-    p = cp.Project(sides={s: list(v) for s, v in (sides or {}).items()})
+    p = cp.Project(sides={s: list((sides or {}).get(s, [])) for s in "TRBL"})
     p.settings.fixed_core, p.settings.square = True, False
     p.floorplan.macros = list(macros)
     return p
@@ -168,6 +169,120 @@ class AnalyseTests(unittest.TestCase):
         self.assertEqual(drop_index(lay, p, "L", 120 + (a.a + a.b) / 2 + 1), 1)
         self.assertEqual(drop_index(lay, p, "L", 120 + (b.a + b.b) / 2 + 1), 3)
         self.assertEqual(drop_index(lay, p, "T", 500.0), 0)
+
+
+class EditTests(unittest.TestCase):
+    def test_move_within_side(self):
+        p = set_lines(chip(), "L", ["A", "B", "C"])
+        move_line(p, "L", 0, "L", 3)  # to_index as before the move (as drop_index gives it)
+        self.assertEqual(p.physical_lines("L"), ["B", "C", "A"])
+        move_line(p, "L", 2, "L", 0)
+        self.assertEqual(p.physical_lines("L"), ["A", "B", "C"])
+
+    def test_move_to_other_side(self):
+        p = set_lines(set_lines(chip(), "L", ["A", "B"]), "T", ["X"])
+        move_line(p, "L", 1, "T", 1)
+        self.assertEqual((p.physical_lines("L"), p.physical_lines("T")), (["A"], ["X", "B"]))
+
+    def test_move_group_line(self):
+        p = set_lines(chip(), "L", ["A", "RFIN [gsg]"])
+        move_line(p, "L", 1, "L", 0)
+        self.assertEqual(p.physical_lines("L"), ["RFIN [gsg]", "A"])
+
+    def test_move_split_line(self):
+        p = set_lines(chip(), "L", ["=== ANA", "A"])
+        move_line(p, "L", 0, "B", 0)
+        self.assertEqual((p.physical_lines("L"), p.physical_lines("B")), (["A"], ["=== ANA"]))
+
+    def test_move_keeps_spacers(self):
+        p = set_lines(chip(), "L", ["A", "", "B"])
+        move_line(p, "L", 2, "L", 0)
+        self.assertEqual(p.physical_lines("L"), ["B", "A", ""])
+
+    def test_move_drags_partner(self):
+        p = set_lines(set_lines(chip(), "L", ["VIN_N", "X", "VIN_P"]), "T", ["Y"])
+        move_line(p, "L", 0, "T", 1)  # VIN_N to the top; VIN_P follows and goes first
+        self.assertEqual((p.physical_lines("L"), p.physical_lines("T")), (["X"], ["Y", "VIN_P", "VIN_N"]))
+
+    def test_move_locked_raises(self):
+        p = set_lines(chip(), "L", ["A [lock]", "B"])
+        with self.assertRaises(ValueError):
+            move_line(p, "L", 0, "L", 2)
+
+    def test_toggle_lock(self):
+        p = set_lines(chip(), "L", ["A [out]", "", "=== X"])
+        self.assertTrue(toggle_lock(p, "L", 0))
+        self.assertEqual(p.physical_lines("L")[0], "A [out] [lock]")
+        self.assertFalse(toggle_lock(p, "L", 0))
+        self.assertEqual(p.physical_lines("L")[0], "A [out]")
+        with self.assertRaises(ValueError):
+            toggle_lock(p, "L", 1)
+
+    def test_optimize_removes_crossings(self):
+        p = set_lines(chip(macros=[adc()]), "L", ["VIN_N", "VDD", "VIN_P"])
+        self.assertEqual(analyse(p).crossings, 1)
+        optimize_pad_order(p)
+        self.assertEqual(p.physical_lines("L"), ["VIN_P", "VDD", "VIN_N"])  # VDD stays, the pair stays split
+        self.assertEqual(analyse(p).crossings, 0)
+        set_lines(p, "L", ["VIN_N", "VIN_P", "VDD"])
+        self.assertEqual(optimize_pad_order(p), 2)
+        self.assertEqual(p.physical_lines("L"), ["VIN_P", "VIN_N", "VDD"])
+        set_lines(p, "L", ["VIN_N [lock]", "VIN_P", "VDD"])
+        self.assertEqual(optimize_pad_order(p), 0)
+
+    def test_optimize_joins_pairs_by_swapping(self):
+        p = chip(macros=[adc(io=["VIN_P", "VIN_N", "CLK"])])
+        p.floorplan.macros[0].x = 0.0
+        set_lines(p, "L", ["VIN_P", "CLK", "VIN_N"])  # CLK is on the right of the macro: connects to L anyway
+        optimize_pad_order(p)
+        lines = p.physical_lines("L")
+        self.assertEqual(abs(lines.index("VIN_P") - lines.index("VIN_N")), 1)
+        self.assertLess(lines.index("VIN_P"), lines.index("VIN_N"))
+
+    def test_add_missing_inserts_by_position(self):
+        p = set_lines(chip(macros=[adc(x=0.0)]), "L", ["A", "B", "C", "D", "E", "F"])
+        self.assertEqual(add_missing_pads(p), ["VIN_P", "VIN_N"])
+        lines = p.physical_lines("L")
+        self.assertEqual(lines[:2], ["VIN_P [analog]", "VIN_N [analog]"])  # pins are high up on the left
+        self.assertEqual(add_missing_pads(p), [])
+
+    def test_generate_pads_alias(self):
+        self.assertIs(cp.generate_pads, add_missing_pads)
+
+    def test_suggest_supply_pads(self):
+        p = chip(sides={"R": ["X"]}, macros=[adc(x=1000.0, io=()), adc("a1", x=1000.0, y=600.0, io=())])
+        added = suggest_supply_pads(p)
+        self.assertEqual(added, ["VDD", "VSS"])  # one pair serves both macros
+        self.assertIn("VDD [vdd]", p.physical_lines("R"))
+        self.assertFalse(analyse(p).supplies)
+
+    def test_suggest_supply_pads_named_from_lef(self):
+        m = box("m", 0.0, 0.0)
+        m.cache.pins += [cp.model.floorplan.MacroPin("VPWR", "INOUT", "POWER"),
+                         cp.model.floorplan.MacroPin("VGND", "INOUT", "GROUND")]
+        p = chip(macros=[m])
+        self.assertEqual(suggest_supply_pads(p), ["VPWR", "VGND"])
+        lines = [l for s in "TRBL" for l in p.sides[s]]
+        self.assertEqual(sorted(lines), ["VGND [vss]", "VPWR [vdd]"])
+        self.assertEqual(suggest_supply_pads(p), [])
+
+    def test_suggest_supply_pads_stops_when_nothing_helps(self):
+        p = chip(sides={"L": ["X"]}, macros=[box("far", 1300.0, 1000.0)])
+        p.settings.max_supply_dist = 10.0  # unreachable: one try per supply, no endless loop
+        self.assertEqual(len(suggest_supply_pads(p)), 2)
+
+    def test_auto_rotate(self):
+        p = set_lines(chip(macros=[adc(x=600.0, y=0.0)]), "T", ["VIN_P", "VIN_N"])
+        self.assertEqual(auto_rotate(p, "a0"), 90)  # the pins on the left edge then face up
+        self.assertEqual(p.floorplan.macros[0].rot, 90)
+        self.assertEqual(auto_rotate(p, "a0"), 90)  # stays
+
+    def test_align(self):
+        p = chip(macros=[box("a", 10.0, 50.0), box("b", 40.0, 20.0), box("c", 0.0, 0.0)])
+        align_macros(p, ["a", "b"], "left")
+        self.assertEqual([m.x for m in p.floorplan.macros], [10.0, 10.0, 0.0])
+        align_macros(p, ["a", "b"], "top")
+        self.assertEqual([m.y for m in p.floorplan.macros], [20.0, 20.0, 0.0])
 
 
 if __name__ == "__main__":

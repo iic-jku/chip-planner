@@ -10,8 +10,9 @@ from tests import ROOT
 
 import chip_planner as cp
 from chip_planner.formats.lef import parse_lef, pick_macro, read_lef
+from chip_planner.model.chip import add_missing_pads as generate_pads
 from chip_planner.model.floorplan import (Floorplan, Macro, MacroDef, MacroPin, core_area, core_origin, find_lef,
-                                          floorplan_warnings, generate_pads, io_signals, nearest_side,
+                                          floorplan_warnings, io_signals, nearest_side,
                                           utilization)
 
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
@@ -257,11 +258,11 @@ class GenerateTests(unittest.TestCase):
         p = self.project(adc("adc0", io=["CLK"]), adc("adc1", x=800.0, io=["CLK"]))
         self.assertEqual(sorted(generate_pads(p)), ["adc0_CLK", "adc1_CLK"])
 
-    def test_non_empty_side_appends(self):
+    def test_non_empty_side_inserts_by_position(self):
         p = self.project(adc(io=["VIN_N", "VIN_P"]))
         p.sides["L"] = ["VDD", "", "VSS"]
-        generate_pads(p)
-        self.assertEqual(p.physical_lines("L"), ["VDD", "", "VSS", "VIN_P [analog]", "VIN_N [analog]"])
+        generate_pads(p)  # the pins sit high up on the left: before the existing lines
+        self.assertEqual(p.physical_lines("L"), ["VIN_P [analog]", "VIN_N [analog]", "VDD", "", "VSS"])
 
     def test_generate_is_idempotent(self):
         p = self.project(adc(io=["VIN_N", "VIN_P"]))

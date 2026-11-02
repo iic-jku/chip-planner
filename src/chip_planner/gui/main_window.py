@@ -7,7 +7,8 @@ from pathlib import Path
 from .. import APP_NAME
 from ..formats import pinlist, project_file, svg
 from ..formats.librelane import export_librelane, librelane_files
-from ..model.floorplan import (Floorplan, Macro, MacroDef, floorplan_warnings, generate_pads, io_signals,
+from ..model.chip import add_missing_pads as generate_pads
+from ..model.floorplan import (Floorplan, Macro, MacroDef, floorplan_warnings, io_signals,
                                utilization)
 from ..model.constants import FUNCTION_NAMES, FUNCTIONS, ORDER, SIDE_NAMES, SIDES, TYPE_NAMES, TYPES
 from ..model.parse import format_entry, parse_line, split_lines
