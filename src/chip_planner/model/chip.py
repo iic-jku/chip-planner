@@ -394,10 +394,11 @@ def optimize_pad_order(project) -> int:
 def add_missing_pads(project) -> List[str]:
     """Insert a pad line for every checked macro pin without a pad, where its flyline points.
 
-    Switches the project to the fixed core size mode first (the sides follow the floorplan).
-    Lines are inserted by position; existing lines are never changed.
+    A pad-limited project switches to the fixed core size mode first (the die then holds the
+    floorplan); a fixed die stays. Lines are inserted by position; existing lines are never changed.
     """
-    project.settings.fixed_core, project.settings.fixed_die = True, False
+    if not project.settings.fixed_die:
+        project.settings.fixed_core = True
     layout = project.layout()
     missing = sorted(analyse(project, layout).missing, key=lambda m: m.pos)
     added = []

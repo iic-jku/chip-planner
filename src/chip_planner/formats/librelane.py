@@ -370,6 +370,12 @@ CORE_INSTANCE = "i_chip_core"  # instance name of the core in chip_top.sv
 ORIENTATION = {0: "N", 90: "E", 180: "S", 270: "W"}  # clockwise rotation in the planner
 
 
+def _num(v):
+    """µm with up to three decimals (``:g`` would cut 1790.565 to 1790.56)."""
+    t = f"{round(v, 3):.3f}".rstrip("0").rstrip(".")
+    return "0" if t in ("-0", "") else t
+
+
 def macros_yaml(project, layout, out_dir=None, source=""):
     """``MACROS`` part of the LibreLane config: LEF/GDS per macro and the placed instances.
 
@@ -403,7 +409,7 @@ def macros_yaml(project, layout, out_dir=None, source=""):
         for m in ms:
             w, h = m.size()
             out += [f"      {CORE_INSTANCE}.{m.name}:",
-                    f"        location: [{x0 + m.x:g}, {layout.die_height - (y0 + m.y + h):g}]",
+                    f"        location: [{_num(x0 + m.x)}, {_num(layout.die_height - (y0 + m.y + h))}]",
                     f"        orientation: {ORIENTATION[m.rot % 360]}"]
     for m in project.floorplan.macros:
         if m.placeholder:

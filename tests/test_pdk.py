@@ -178,6 +178,10 @@ class MacroExport(unittest.TestCase):
                       "        orientation: E\n", text)
         self.assertIn("# placeholder dig (no LEF) not exported", text)
 
+    def test_macros_yaml_keeps_three_decimals(self):
+        from chip_planner.formats.librelane import _num
+        self.assertEqual((_num(1790.565), _num(160.0), _num(0.1 + 0.2)), ("1790.565", "160", "0.3"))
+
     def test_macros_yaml_only_with_macros(self):
         self.assertNotIn("macros.yaml", librelane_files(compac_like()))
         files = librelane_files(self.project())

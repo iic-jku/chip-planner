@@ -523,15 +523,14 @@ class MainWindow(QMainWindow):
     UNDO_STEPS = 200
 
     def _state(self):
-        return self.get_project().to_dict()
+        # Project objects, not dicts: from_dict would drop spacer lines at the end of a side
+        return self.get_project()
 
     @staticmethod
     def _with_settings(state, settings_from):
         """``state`` with the settings of ``settings_from``: settings changes are no undo steps."""
-        out = {k: v for k, v in settings_from.items() if k not in ("sides", "floorplan")}
-        out["sides"] = state["sides"]
-        if "floorplan" in state:
-            out["floorplan"] = state["floorplan"]
+        out = copy.deepcopy(state)
+        out.settings = copy.deepcopy(settings_from.settings)
         return out
 
     def reset_history(self):
@@ -550,9 +549,9 @@ class MainWindow(QMainWindow):
         self._current = new
 
     def _restore(self, state):
-        file = self.file
-        self.set_project(Project.from_dict(self._with_settings(state, self._current)), fit=False)
-        self.file = file
+        file, warnings = self.file, self.fp_warnings
+        self.set_project(self._with_settings(state, self._current), fit=False)
+        self.file, self.fp_warnings = file, warnings
         self.setWindowModified(True)
         self._current = self._state()
 
@@ -727,7 +726,8 @@ class MainWindow(QMainWindow):
     def _apply(self, project, message=None):
         """Show an edited project, keeping file, view and modified state; one undo step."""
         self.commit()  # pending typing is a step of its own
-        file = self.file
+        file, warnings = self.file, self.fp_warnings
+        project.load_warnings = warnings  # LEF reload warnings stay until the next reload
         self.set_project(project, fit=False)
         self.file = file
         self.setWindowModified(True)
@@ -859,6 +859,7 @@ class MainWindow(QMainWindow):
         view_project.floorplan = self.floorplan  # the macro items move the window's macros
         self.check = check = chip.analyse(view_project, lay)
         self._guide_item = None
+        self.view._measure = None  # its items go with the redraw
         self.chip_items = fill_chip(self.scene, view_project, lay, check, self.pal, self.layers,
                                     self.selected_macros, {
                                         "on_press": lambda m: self.commit(),

@@ -246,6 +246,17 @@ class EditTests(unittest.TestCase):
         self.assertEqual(lines[:2], ["VIN_P [analog]", "VIN_N [analog]"])  # pins are high up on the left
         self.assertEqual(add_missing_pads(p), [])
 
+    def test_add_missing_keeps_fixed_die(self):
+        p = set_lines(chip(macros=[adc(x=0.0)]), "L", ["A"])
+        p.settings.fixed_core, p.settings.fixed_die = False, True
+        p.settings.die_width = p.settings.die_height = 3000.0
+        add_missing_pads(p)
+        self.assertEqual((p.settings.fixed_die, p.settings.fixed_core), (True, False))
+        p.settings.fixed_die = False  # pad-limited: switches to the core size as minimum
+        p.floorplan.macros[0].io.append("CLK")
+        add_missing_pads(p)
+        self.assertTrue(p.settings.fixed_core)
+
     def test_generate_pads_alias(self):
         self.assertIs(cp.generate_pads, add_missing_pads)
 

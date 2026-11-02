@@ -393,5 +393,37 @@ class ChipGui(unittest.TestCase):
         w.load_example()
         self.assertEqual((w.undo_stack, w.redo_stack), ([], []))
 
+    def test_undo_keeps_leading_spacer_on_reversed_side(self):
+        w = self.win  # ccw: the top side is numbered right to left, its first editor line is the last entry
+        w.editors["T"].set_text("\nA\nB")
+        w.commit()
+        w.editors["L"].set_text("X")
+        w.commit()
+        w.undo()
+        self.assertEqual(self.lines("T"), ["", "A", "B"])
+
+    def test_measure_survives_redraw(self):
+        from chip_planner.gui.qt import QPointF
+        w = self.win
+        w.measure_btn.setChecked(True)
+        v = w.view
+        v._measure = (QPointF(0, 0), w.scene.addLine(0, 0, 10, 10), w.scene.addLine(0, 0, 1, 1))
+        w.render()
+        w.measure_btn.setChecked(False)  # raised RuntimeError on deleted items before
+        self.assertIsNone(v._measure)
+
+    def test_actions_keep_lef_warnings(self):
+        import shutil
+        w = self.win
+        d = Path(self.tmp.name) / "adc_sar"
+        shutil.copytree(MACRO_DIR, d)
+        w.add_macro_dir(str(d))
+        shutil.rmtree(d)
+        w.reload_macros()
+        self.assertIn("No LEF found", w.warn.text())
+        w.editors["L"].set_text("A")
+        w.toggle_lock("L", 0)
+        self.assertIn("No LEF found", w.warn.text())
+
 if __name__ == "__main__":
     unittest.main()
