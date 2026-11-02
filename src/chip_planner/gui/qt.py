@@ -2,7 +2,7 @@
 
 try:
     from PySide6.QtCore import QEvent, QLocale, QPointF, QRect, QRectF, QSize, Qt, QTimer
-    from PySide6.QtGui import (QAction, QBrush, QColor, QFont, QFontDatabase, QImage, QKeySequence,
+    from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QImage, QKeySequence,
                                QPainter, QPalette, QPen, QTextCursor, QTextFormat, QTransform)
     from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
                                    QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem, QGraphicsRectItem,
@@ -16,7 +16,7 @@ try:
 except ImportError:  # pragma: no cover
     try:
         from PyQt6.QtCore import QEvent, QLocale, QPointF, QRect, QRectF, QSize, Qt, QTimer
-        from PyQt6.QtGui import (QAction, QBrush, QColor, QFont, QFontDatabase, QImage, QKeySequence,
+        from PyQt6.QtGui import (QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QImage, QKeySequence,
                                  QPainter, QPalette, QPen, QTextCursor, QTextFormat, QTransform)
         from PyQt6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
                                      QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem, QGraphicsRectItem,

@@ -1,6 +1,7 @@
 """Main window: side editors and macro list, chip view, pin list, settings and LibreLane output."""
 
 import copy
+import json
 import os
 from pathlib import Path
 
@@ -13,19 +14,67 @@ from ..model.constants import FUNCTION_NAMES, FUNCTIONS, ORDER, SIDE_NAMES, SIDE
 from ..model.parse import format_entry, parse_line, split_lines
 from ..model.pdk import get_package, get_pdk, package_names, pdk_names
 from ..model.project import PadSettings, Project, Settings
-from ..style import EXPORT_PALETTE
+from ..style import EXPORT_PALETTE, PALETTES
 from .chip_view import LAYERS, ChipItems, ChipView, fill_chip
 from .macro_panel import MacroPanel
-from .qt import (QAbstractItemView, QAction, QApplication, QBrush, QCheckBox, QColor, QComboBox, QEvent,
+from .qt import (QAbstractItemView, QAction, QActionGroup, QApplication, QBrush, QCheckBox, QColor, QComboBox, QEvent,
                  QFileDialog, QFrame, QGraphicsScene, QGridLayout, QGroupBox, QHBoxLayout, QImage, QInputDialog,
                  QKeySequence, QLabel, QMainWindow, QMenu, QMessageBox, QPainter, QPlainTextEdit, QPushButton,
-                 QRectF, QSplitter, Qt, QTableWidget, QTableWidgetItem, QTabWidget, QTextCursor, QTimer,
+                 QPalette, QRectF, QSplitter, Qt, QTableWidget, QTableWidgetItem, QTabWidget, QTextCursor, QTimer,
                  QToolButton, QVBoxLayout, QWidget)
 from .scene import fill_scene, make_pen, mono_family
 from .widgets import SideEditor, spin
 
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "chip-planner"
 LAST_STATE = CONFIG_DIR / "last-qt.json"
+VIEW_SETTINGS = CONFIG_DIR / "view.json"   # view preferences (theme), not part of a project
+THEMES = (("system", "System"), ("light", "Light"), ("dark", "Dark"))
+_SYSTEM_LOOK = None   # (palette, style name) of the application before a theme was applied
+
+
+def load_view_settings():
+    try:
+        with open(VIEW_SETTINGS, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_view_settings(settings):
+    try:
+        VIEW_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+        with open(VIEW_SETTINGS, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=2)
+    except OSError:
+        pass
+
+
+def apply_theme(theme):
+    """Set the Qt look for ``theme`` ("system", "light", "dark"); returns the drawing palette."""
+    global _SYSTEM_LOOK
+    app = QApplication.instance()
+    if _SYSTEM_LOOK is None:
+        _SYSTEM_LOOK = (QPalette(app.palette()), app.style().name())
+    if theme not in ("light", "dark"):
+        app.setStyle(_SYSTEM_LOOK[1])
+        app.setPalette(_SYSTEM_LOOK[0])
+        dark = _SYSTEM_LOOK[0].color(QPalette.ColorRole.Window).lightness() < 128
+        return PALETTES["dark" if dark else "light"]
+    pal = PALETTES[theme]
+    qp = QPalette()
+    R = QPalette.ColorRole
+    for role, key in ((R.Window, "bg"), (R.Base, "surface"), (R.AlternateBase, "die"), (R.Button, "surface"),
+                      (R.WindowText, "fg"), (R.Text, "fg"), (R.ButtonText, "fg"), (R.ToolTipBase, "surface"),
+                      (R.ToolTipText, "fg"), (R.PlaceholderText, "muted"), (R.Mid, "line"), (R.Dark, "line"),
+                      (R.Highlight, "accent"), (R.Link, "accent")):
+        qp.setColor(role, QColor(pal[key]))
+    qp.setColor(R.HighlightedText, QColor(pal["bg"]))
+    for role in (R.Text, R.WindowText, R.ButtonText):
+        qp.setColor(QPalette.ColorGroup.Disabled, role, QColor(pal["muted"]))
+    app.setStyle("Fusion")
+    app.setPalette(qp)
+    return pal
 
 MODE_LABELS = [("ccw", "Counter-clockwise from top left (package)"),
                ("cw", "Clockwise from top left")]
@@ -40,9 +89,10 @@ COL = {name: i for i, name in enumerate(TABLE_COLUMNS)}
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, pal, path=None):
+    def __init__(self, pal, path=None, theme="system"):
         super().__init__()
         self.pal = pal
+        self.theme = theme
         self.file = None
         self.selected = None
         self.layout_data = None
@@ -230,7 +280,7 @@ class MainWindow(QMainWindow):
         for key, label in LAYERS:
             a = menu.addAction(label)
             a.setCheckable(True)
-            a.setChecked(True)
+            a.setChecked(key in self.layers)
             a.toggled.connect(lambda on, k=key: self.set_layer(k, on))
             self.layer_actions[key] = a
         self.layers_btn.setMenu(menu)
@@ -459,6 +509,16 @@ class MainWindow(QMainWindow):
         act(mv, "Zoom In", lambda: self.view.zoom(1.25, False), QKeySequence.StandardKey.ZoomIn)
         act(mv, "Zoom Out", lambda: self.view.zoom(1 / 1.25, False), QKeySequence.StandardKey.ZoomOut)
         act(mv, "Fit", lambda: self.view.fit(), "Ctrl+0")
+        mv.addSeparator()
+        mt = mv.addMenu("Theme")
+        group = QActionGroup(self)
+        self.theme_actions = {}
+        for key, label in THEMES:
+            a = act(mt, label, lambda _=False, k=key: self.set_theme(k))
+            a.setCheckable(True)
+            a.setChecked(key == self.theme)
+            group.addAction(a)
+            self.theme_actions[key] = a
 
     # ---------- State ----------
 
@@ -517,6 +577,24 @@ class MainWindow(QMainWindow):
         self.render()
         if fit:
             self.view.fit()
+
+    def set_theme(self, theme):
+        """Switch between system, light and dark look; rebuilds the widgets, keeps the work."""
+        project, file, modified = self.get_project(), self.file, self.isWindowModified()
+        keep = (self.undo_stack, self.redo_stack, self._current, self.fp_warnings,
+                self.tabs.currentIndex(), self.left_tabs.currentIndex())
+        self.theme = theme
+        self.pal = apply_theme(theme)
+        self._build()
+        project.load_warnings = keep[3]
+        self.set_project(project)
+        self.undo_stack, self.redo_stack, self._current, self.fp_warnings = keep[:4]
+        self.tabs.setCurrentIndex(keep[4])
+        self.left_tabs.setCurrentIndex(keep[5])
+        self.file = file
+        self.setWindowModified(modified)
+        self.theme_actions[theme].setChecked(True)
+        save_view_settings(dict(load_view_settings(), theme=theme))
 
     # ---------- Undo ----------
 

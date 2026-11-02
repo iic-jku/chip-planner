@@ -265,15 +265,27 @@ def fill_chip(scene, project, layout, check, pal, layers, selected=(), callbacks
     return items
 
 
+TAPE = "#f2c230"       # tape measure: yellow band with dark marks, readable on both palettes
+TAPE_INK = "#3d3000"
+
+
+def _nice_step(x):
+    """Smallest 1/2/5 × 10^n not below ``x``."""
+    if x <= 0:
+        return 1.0
+    e = 10 ** math.floor(math.log10(x))
+    return next(m * e for m in (1, 2, 5, 10) if m * e >= x)
+
+
 class ChipView(RingView):
-    """Ring view with pad dragging (along the ring), alt-click lock, hover highlight and a measure tool."""
+    """Ring view with pad dragging (along the ring), alt-click lock, hover highlight and a measure tape."""
 
     def __init__(self, scene, on_click, on_hover, on_drop, on_lock):
         super().__init__(scene, on_click, on_hover)
         self.on_drop, self.on_lock = on_drop, on_lock
         self._drag = None          # (tag, press point) of a pad drag
         self.measuring = False
-        self._measure = None       # (start point, line item, label item)
+        self._measure = None       # (start point, items, label text)
         self.hover_key = None
 
     def set_measuring(self, on):
@@ -283,21 +295,77 @@ class ChipView(RingView):
 
     def _clear_measure(self):
         if self._measure:
-            for it in self._measure[1:]:
-                if it.scene():
-                    self.scene().removeItem(it)
+            for it in self._measure[1]:
+                try:
+                    if it.scene():
+                        self.scene().removeItem(it)
+                except RuntimeError:  # already deleted with a redraw
+                    pass
         self._measure = None
+
+    def measure_text(self):
+        return self._measure[2] if self._measure else ""
+
+    def measure_line(self, a, b):
+        """Draw the tape measure from scene point ``a`` to ``b`` (µm)."""
+        self._clear_measure()
+        sc = self.scene()
+        px = 1.0 / max(self.transform().m11(), 1e-6)    # µm per screen pixel
+        dx, dy = b.x() - a.x(), b.y() - a.y()
+        d = math.hypot(dx, dy)
+        items = []
+
+        def add(it, z=20):
+            it.setZValue(z)
+            items.append(it)
+            return it
+
+        legs = make_pen(TAPE, 1.5, [4, 3])               # Δx and Δy legs
+        add(sc.addLine(a.x(), a.y(), b.x(), a.y(), legs), 19)
+        add(sc.addLine(b.x(), a.y(), b.x(), b.y(), legs), 19)
+        add(sc.addLine(a.x(), a.y(), b.x(), b.y(), make_pen(TAPE_INK, 16)))   # band outline
+        add(sc.addLine(a.x(), a.y(), b.x(), b.y(), make_pen(TAPE, 13)))       # band
+        if d > 0:
+            ux, uy = dx / d, dy / d                       # along the tape
+            nx, ny = -uy, ux                              # across
+            step = _nice_step(10 * px)                    # ticks at least 10 px apart
+            major = step * (5 if str(step).lstrip("0.")[:1] == "2" else 10)
+            ink = make_pen(TAPE_INK, 1.2)
+            k = 0
+            while k * step <= d + 1e-9:
+                t = k * step
+                big = abs(t / major - round(t / major)) < 1e-6
+                half = (6 if big else 3) * px
+                cx, cy = a.x() + ux * t, a.y() + uy * t
+                add(sc.addLine(cx - nx * half, cy - ny * half, cx + nx * half, cy + ny * half, ink), 21)
+                k += 1
+            end = 11 * px
+            for p in (a, b):
+                add(sc.addLine(p.x() - nx * end, p.y() - ny * end, p.x() + nx * end, p.y() + ny * end,
+                               make_pen(TAPE_INK, 2.5)), 21)
+        text = f"{d:.1f} µm   Δx {abs(dx):.1f}  Δy {abs(dy):.1f}"
+        box = QGraphicsRectItem()
+        box.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations)
+        label = QGraphicsSimpleTextItem(text, box)
+        font = QFont(mono_family())
+        font.setPixelSize(15)
+        font.setBold(True)
+        label.setFont(font)
+        label.setBrush(QBrush(QColor(TAPE_INK)))
+        br = label.boundingRect()
+        box.setRect(QRectF(-6, -4, br.width() + 12, br.height() + 8))
+        box.setPen(make_pen(TAPE_INK, 1.5))
+        box.setBrush(QBrush(QColor(TAPE)))
+        box.setPos(b.x() + 14 * px, b.y() + 10 * px)
+        sc.addItem(box)
+        add(box, 22)
+        self._measure = (a, items, text)
 
     def mousePressEvent(self, e):
         pos = e.position().toPoint()
         if e.button() == Qt.MouseButton.LeftButton and self.measuring:
             p = self.mapToScene(pos)
-            self._clear_measure()
-            line = self.scene().addLine(p.x(), p.y(), p.x(), p.y(), make_pen("#1a1e1b", 1.2))
-            line.setZValue(10)
-            label = text_item(self.scene(), "", 30, "#1a1e1b")
-            label.setZValue(10)
-            self._measure = (p, line, label)
+            self.measure_line(p, p)
             e.accept()
             return
         if e.button() == Qt.MouseButton.LeftButton:
@@ -314,14 +382,8 @@ class ChipView(RingView):
 
     def mouseMoveEvent(self, e):
         pos = e.position().toPoint()
-        if self._measure and e.buttons() & Qt.MouseButton.LeftButton:
-            a, line, label = self._measure
-            b = self.mapToScene(pos)
-            line.setLine(a.x(), a.y(), b.x(), b.y())
-            dx, dy = abs(b.x() - a.x()), abs(b.y() - a.y())
-            label.setText(f"Δx {dx:.1f}  Δy {dy:.1f}  d {math.hypot(dx, dy):.1f} µm")
-            label.setScale(max(8.0, 14.0 / max(self.transform().m11(), 1e-6)) / 100 * 1.0)
-            label.setPos(b.x() + 6 / max(self.transform().m11(), 1e-6), b.y())
+        if self.measuring and self._measure and e.buttons() & Qt.MouseButton.LeftButton:
+            self.measure_line(self._measure[0], self.mapToScene(pos))
             e.accept()
             return
         if self._drag:

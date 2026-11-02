@@ -407,7 +407,7 @@ class ChipGui(unittest.TestCase):
         w = self.win
         w.measure_btn.setChecked(True)
         v = w.view
-        v._measure = (QPointF(0, 0), w.scene.addLine(0, 0, 10, 10), w.scene.addLine(0, 0, 1, 1))
+        v.measure_line(QPointF(0, 0), QPointF(300, 400))
         w.render()
         w.measure_btn.setChecked(False)  # raised RuntimeError on deleted items before
         self.assertIsNone(v._measure)
@@ -424,6 +424,40 @@ class ChipGui(unittest.TestCase):
         w.editors["L"].set_text("A")
         w.toggle_lock("L", 0)
         self.assertIn("No LEF found", w.warn.text())
+
+    def test_measure_tape(self):
+        from chip_planner.gui.qt import QPointF
+        w = self.win
+        w.measure_btn.setChecked(True)
+        n = len(w.scene.items())
+        w.view.measure_line(QPointF(100, 100), QPointF(400, 500))
+        self.assertIn("500.0 µm", w.view.measure_text())
+        self.assertIn("Δx 300.0", w.view.measure_text())
+        self.assertGreater(len(w.scene.items()) - n, 10)  # band, ticks, end marks, legs, label
+        w.view.measure_line(QPointF(100, 100), QPointF(100, 160))
+        self.assertIn("60.0 µm", w.view.measure_text())
+        w.measure_btn.setChecked(False)
+        self.assertEqual(len(w.scene.items()), n)
+
+    def test_theme_switch(self):
+        import json
+        from chip_planner.gui.qt import QColor
+        main_window.VIEW_SETTINGS = Path(self.tmp.name) / "view.json"
+        w = self.win
+        w.editors["L"].set_text("A")
+        w.commit()
+        w.setWindowModified(True)
+        before = w.get_project()
+        w.set_theme("dark")
+        self.assertEqual(w.pal, PALETTES["dark"])
+        self.assertEqual(w.scene.backgroundBrush().color(), QColor(PALETTES["dark"]["bg"]))
+        self.assertEqual(w.get_project(), before)
+        self.assertTrue(w.isWindowModified() and w.undo_stack)
+        self.assertTrue(w.theme_actions["dark"].isChecked())
+        self.assertEqual(json.loads(main_window.VIEW_SETTINGS.read_text())["theme"], "dark")
+        w.set_theme("light")
+        self.assertEqual(w.pal, PALETTES["light"])
+        self.assertEqual(main_window.load_view_settings()["theme"], "light")
 
 if __name__ == "__main__":
     unittest.main()
