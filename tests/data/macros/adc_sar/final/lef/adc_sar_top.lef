@@ -1,0 +1,74 @@
+# Test fixture: a small analog macro as written by LibreLane
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+UNITS
+  DATABASE MICRONS 1000 ;
+END UNITS
+
+MACRO adc_sar_top
+  CLASS BLOCK ;
+  FOREIGN adc_sar_top ;
+  ORIGIN 0.000 0.000 ;
+  SIZE 420.000 BY 310.000 ;
+  PROPERTY LEF58_CLASS "TYPE BLOCK ;" ;
+  PIN VIN_P
+    DIRECTION INPUT ;
+    USE ANALOG ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 220.000 2.000 240.000 ;
+    END
+  END VIN_P
+  PIN VIN_N
+    DIRECTION INPUT ;
+    USE ANALOG ;
+    PORT
+      LAYER Metal3 ;
+        RECT 0.000 100.000 2.000 120.000 ;
+    END
+  END VIN_N
+  PIN CLK
+    DIRECTION INPUT ;
+    USE CLOCK ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 250.000 420.000 270.000 ;
+    END
+  END CLK
+  PIN DOUT[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER Metal3 ;
+        RECT 418.000 50.000 420.000 52.000 ;
+    END
+  END DOUT[0]
+  PIN EN
+    DIRECTION OUTPUT TRISTATE ;
+    PORT
+      LAYER Metal2 ;
+        POLYGON 100.000 0.000 110.000 0.000 110.000 2.000 100.000 2.000 ;
+    END
+  END EN
+  PIN VDD
+    DIRECTION INOUT ;
+    USE POWER ;
+    PORT
+      LAYER Metal5 ;
+        RECT 0.000 0.000 420.000 4.000 ;
+    END
+  END VDD
+  PIN NOGEO
+    DIRECTION INPUT ;
+    PORT
+      LAYER Metal1 ;
+    END
+  END NOGEO
+  OBS
+    LAYER Metal1 ;
+      RECT 5.000 5.000 415.000 305.000 ;
+  END
+END adc_sar_top
+
+END LIBRARY
