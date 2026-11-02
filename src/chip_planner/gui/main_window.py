@@ -13,7 +13,7 @@ from ..model.floorplan import Floorplan, Macro, MacroDef, core_area, utilization
 from ..model.constants import FUNCTION_NAMES, FUNCTIONS, ORDER, SIDE_NAMES, SIDES, TYPE_NAMES, TYPES
 from ..model.parse import format_entry, parse_line, split_lines
 from ..model.pdk import get_package, get_pdk, package_names, pdk_names
-from ..model.project import PadSettings, Project, Settings
+from ..model.project import PadSettings, Project, Settings, text_to_lines
 from ..style import EXPORT_PALETTE, PALETTES
 from .chip_view import LAYERS, ChipItems, ChipView, domain_colors, fill_chip
 from .macro_panel import MacroPanel
@@ -543,7 +543,7 @@ class MainWindow(QMainWindow):
         )
         project = Project(settings, floorplan=copy.deepcopy(self.floorplan))
         for s in SIDES:
-            project.set_physical_lines(s, split_lines(self.editors[s].text()))
+            project.set_physical_lines(s, text_to_lines(self.editors[s].text()))  # spacers at the end count
         return project
 
     def set_project(self, project, fit=True):
@@ -833,8 +833,13 @@ class MainWindow(QMainWindow):
         lay = self.layout_data
         side, line = self._editor_line(tag)
         to = chip.nearest_side(x, y, lay.die_width, lay.die_height)
-        along = x if to in "TB" else y
-        self.move_pad(side, line, to, chip.drop_index(lay, self.project, to, along))
+        project = self.get_project()
+        try:
+            chip.place_line(project, side, line, to, x if to in "TB" else y, lay)
+        except ValueError as e:
+            self.statusBar().showMessage(f"{e} (alt-click unlocks it)", 6000)
+            return
+        self._apply(project)
 
     def lock_tag(self, tag):
         side, line = self._editor_line(tag)

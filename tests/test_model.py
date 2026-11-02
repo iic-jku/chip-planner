@@ -80,6 +80,15 @@ class ProjectApi(unittest.TestCase):
         # older versions ignored empty lines at the end of a side
         self.assertEqual(p.side_text("T"), data["sides"]["T"].rstrip("\n"))
 
+    def test_trailing_spacers_kept_in_new_files(self):
+        p = cp.Project()
+        p.sides["L"] = ["A", "", ""]
+        d = p.to_dict()
+        self.assertEqual(d["format"], 2)
+        self.assertEqual(cp.Project.from_dict(d).sides["L"], ["A", "", ""])
+        del d["format"]  # older files: empty lines at the end were ignored
+        self.assertEqual(cp.Project.from_dict(d).sides["L"], ["A"])
+
     def test_trailing_spacer_counts_in_api(self):
         p = cp.Project()
         p.sides["L"] = ["A"]

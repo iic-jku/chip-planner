@@ -514,5 +514,23 @@ class ChipGui(unittest.TestCase):
         w.layer_actions["domains"].setChecked(False)
         self.assertNotIn("ANA", texts())
 
+    def test_editor_keeps_trailing_spacers(self):
+        w = self.win
+        w.editors["L"].set_text("A\n\n")
+        self.assertEqual(w.get_project().physical_lines("L"), ["A", "", ""])
+
+    def test_drop_pad_into_empty_area(self):
+        w = self.win
+        w.cb_die.setCurrentIndex(w.cb_die.findData("core"))  # a pad-limited side has no empty area
+        w.editors["L"].set_text("A\nB\nC")
+        w.render()
+        lay = w.layout_data
+        before = {q.name: (q.cx, q.cy) for q in lay.pins}
+        w.drop_pad("L:0", lay.ring_depth / 2, lay.die_height - lay.ring_depth - 30)  # bottom end of the left side
+        after = {q.name: (q.cx, q.cy) for q in w.layout_data.pins}
+        self.assertEqual((after["B"], after["C"]), (before["B"], before["C"]))
+        self.assertEqual(self.lines("L")[-1], "A")
+        self.assertEqual(self.lines("L")[0], "")
+
 if __name__ == "__main__":
     unittest.main()

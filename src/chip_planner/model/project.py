@@ -66,6 +66,9 @@ class Settings:
                         num(self.max_supply_dist, 1000.0))
 
 
+FILE_FORMAT = 2  # 2: empty lines at the end of a side are spacers (kept); 1: ignored
+
+
 def text_to_lines(text):
     """Editor text → list of lines (exact round trip with :func:`lines_to_text`)."""
     text = text.replace("\r", "")
@@ -145,6 +148,7 @@ class Project:
             "fixed_core": st.fixed_core, "core_w": st.core_width, "core_h": st.core_height, "grid": st.grid,
             "halo": st.halo, "spacing": st.spacing, "max_flyline": st.max_flyline,
             "max_supply_dist": st.max_supply_dist,
+            "format": FILE_FORMAT,
             "sides": {s: self.side_text(s) for s in SIDES},
             **({"floorplan": self.floorplan.to_dict()} if self.floorplan.macros else {}),
         }
@@ -173,8 +177,9 @@ class Project:
             max_flyline=num(st["max_flyline"], 900.0),
             max_supply_dist=num(st["max_supply_dist"], 1000.0),
         )
-        # Older versions ignored empty lines at the end of a side; drop them to keep the layout
-        return cls(settings, {s: split_lines(str(st["sides"][s] or "")) for s in SIDES},
+        # Before format 2, empty lines at the end of a side were ignored; drop them to keep the layout
+        lines = text_to_lines if num(st["format"], 1) >= 2 else split_lines
+        return cls(settings, {s: lines(str(st["sides"][s] or "")) for s in SIDES},
                    Floorplan.from_dict(st["floorplan"]))
 
 
@@ -199,4 +204,5 @@ def normalize_state(st):
         out["rf"] = dict(base["rf"], **st["rf"])
     out["sides"] = {s: st.get("sides", {}).get(s, "") for s in SIDES}
     out["floorplan"] = st.get("floorplan", {})
+    out["format"] = st.get("format", 1)
     return out

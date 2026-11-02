@@ -475,3 +475,88 @@ def align_macros(project, names, edge) -> None:
             m.y = y
     else:
         raise ValueError(f"unknown edge {edge!r}")
+
+
+def _spacer_width(project) -> float:
+    """Width of an empty line (one standard pitch, snapped to the PDK site like the layout does)."""
+    from .pdk import get_pdk
+    st = project.settings.sanitized()
+    pitch, pdk = st.std.pitch, get_pdk(st.pdk)
+    return max(pdk.site, round(pitch / pdk.site) * pdk.site) if pdk else pitch
+
+
+def _line_widths(project, layout, side) -> List[float]:
+    """Width along the side of every physical line: pads from the layout, spacers one pitch."""
+    by_line = _pins_by_line(project, layout)
+    splits = {project.physical_line_index(sp.side, sp.line): sp for sp in layout.splits if sp.side == side}
+    P = _spacer_width(project)
+    out = []
+    for i in range(len(project.physical_lines(side))):
+        if (side, i) in by_line:
+            out.append(sum(p.b - p.a for p in by_line[(side, i)]))
+        elif i in splits:
+            out.append(splits[i].b - splits[i].a)
+        else:
+            out.append(P)
+    return out
+
+
+def place_line(project, side, index, to_side, along, layout=None) -> None:
+    """Drop a line at ``along`` (die coordinate along ``to_side``), keeping every other pad in place.
+
+    On an empty part of the side (before the first or after the last line) the line lands where it
+    is dropped: spacer lines fill the distance, and on a centred side the same width is added at the
+    other end. On a spacer slot it replaces the spacer. The line leaves spacers behind at its old
+    place. Dropped onto a pad or split, it is sorted in like :func:`move_line` (nothing left behind).
+    Raises ``ValueError`` for a locked line.
+    """
+    layout = layout or project.layout()
+    src = project.physical_lines(side)
+    line = src[index]
+    if _is_locked(line):
+        raise ValueError(f"{parse_line(line)['name']} is locked")
+    P = _spacer_width(project)
+    w = _line_widths(project, layout, side)[index]
+    gap = [""] * max(1, round(w / P))            # what the line leaves behind
+    if to_side == side:
+        dst, widths = list(src), _line_widths(project, layout, side)
+        dst[index:index + 1] = gap
+        widths[index:index + 1] = [P] * len(gap)
+    else:
+        dst, widths = project.physical_lines(to_side), _line_widths(project, layout, to_side)
+    E = layout.side_space[to_side]
+    S = sum(widths)
+    centred = project.settings.sanitized().align == "center"
+    o = (E - S) / 2 if centred else (E - S if project.is_reversed(to_side) else 0.0)
+    pos = along - layout.ring_depth
+    # spacers that still fit on the side (a centred side needs them twice); more would grow the die
+    room = max(0, int((E - S - (2 * w if centred else w)) / ((2 if centred else 1) * P) + 1e-9))
+    if o <= pos <= o + S:
+        cur = o
+        for j, wj in enumerate(widths):
+            if cur <= pos < cur + wj:
+                break
+            cur += wj
+        if dst[j].strip() or (to_side == side and index <= j < index + len(gap)):
+            if dst[j].strip():   # on a pad or split: sort in as before
+                move_line(project, side, index, to_side, drop_index(layout, project, to_side, along))
+            return
+        dst[j] = line           # on a spacer: take its slot
+    elif pos > o + S and round((pos - (o + S) - w / 2) / P) <= 0 or pos < o and round((o - pos - w / 2) / P) <= 0:
+        # right next to the first or last line: no room for a spacer, sort in
+        move_line(project, side, index, to_side, drop_index(layout, project, to_side, along))
+        return
+    elif pos > o + S:
+        k = min(room, max(0, round((pos - (o + S) - w / 2) / P)))
+        dst += [""] * k + [line]
+        if centred:
+            dst[:0] = [""] * round((k * P + w) / P)
+    else:
+        k = min(room, max(0, round((o - pos - w / 2) / P)))
+        dst[:0] = [line] + [""] * k
+        if centred:
+            dst += [""] * round((k * P + w) / P)
+    if to_side != side:
+        src[index:index + 1] = gap
+        project.set_physical_lines(side, src)
+    project.set_physical_lines(to_side, dst)

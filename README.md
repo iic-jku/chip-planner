@@ -18,7 +18,7 @@ Without installing: `PYTHONPATH=src python3 -m chip_planner`.
 
 One line per entry. In the GUI each side lists its pads as seen on the die:
 top and bottom from left to right, left and right from top to bottom.
-Empty lines at the end of a side are ignored.
+Empty lines at the end of a side are spacers as well (files of older versions ignored them).
 
 | Entry | Meaning |
 |---|---|
@@ -84,7 +84,8 @@ two tabs: *Pads* (the side editors) and *Macros* (the macro list).
 
 **Pads**
 - Drag a pad (or a `=== NAME` split marker) along the ring to move it, also to another side; the
-  side editors follow. Alt-click locks a pad (tag `[lock]`): it can no longer be dragged and
+  side editors follow. Dropped on another pad it is sorted in; dropped on an empty part of a side
+  (or on a spacer) it stays exactly there and no other pad moves: empty lines fill the distance. Alt-click locks a pad (tag `[lock]`): it can no longer be dragged and
   *Optimize Pad Order* leaves it in place.
 - *Add Missing Pads* adds a pad for every checked pin without one, where its dashed line points.
   *Suggest Supply Pads* adds VDD/VSS pads (named after the macro's LEF power pins) next to the

@@ -7,7 +7,8 @@ from tests import ROOT
 import chip_planner as cp
 from chip_planner.formats.lef import read_lef
 from chip_planner.model.chip import (add_missing_pads, align_macros, analyse, auto_rotate, diff_partner, drop_index,
-                                     move_line, optimize_pad_order, suggest_supply_pads, toggle_lock)
+                                     move_line, optimize_pad_order, place_line, suggest_supply_pads,
+                                     toggle_lock)
 from chip_planner.model.floorplan import Macro, MacroDef
 
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
@@ -296,6 +297,92 @@ class EditTests(unittest.TestCase):
         self.assertEqual([m.y for m in p.floorplan.macros], [20.0, 20.0, 0.0])
 
 
+
+
+class PlaceTests(unittest.TestCase):
+    """Dropping a pad into an empty part of a side: it stays there, no other pad moves."""
+
+    def centres(self, p):
+        lay = p.layout()
+        return {q.name: (q.side, round(q.cx, 3), round(q.cy, 3)) for q in lay.pins}
+
+    def test_after_the_end(self):
+        p = set_lines(set_lines(chip(), "L", ["A", "B"]), "T", ["X", "Y"])
+        before = self.centres(p)
+        place_line(p, "L", 0, "L", 120 + 1000.0)  # far below B
+        after = self.centres(p)
+        self.assertEqual(after["B"], before["B"])
+        self.assertEqual((after["X"], after["Y"]), (before["X"], before["Y"]))
+        self.assertLessEqual(abs(after["A"][2] - 1120.0), 40.0)  # within half a pitch of the drop
+        self.assertEqual(p.physical_lines("L")[-1], "A")
+
+    def test_before_the_start(self):
+        p = set_lines(chip(), "B", ["A", "B", "C"])
+        before = self.centres(p)
+        place_line(p, "B", 2, "B", 120 + 100.0)
+        after = self.centres(p)
+        self.assertEqual((after["A"], after["B"]), (before["A"], before["B"]))
+        self.assertLessEqual(abs(after["C"][1] - 220.0), 40.0)
+        self.assertEqual(p.physical_lines("B")[0], "C")
+
+    def test_from_another_side(self):
+        p = set_lines(set_lines(chip(), "L", ["A", "B", "C"]), "R", ["X"])
+        before = self.centres(p)
+        place_line(p, "L", 1, "R", 120 + 100.0)
+        after = self.centres(p)
+        self.assertEqual((after["A"], after["C"], after["X"]), (before["A"], before["C"], before["X"]))
+        self.assertEqual(after["B"][0], "R")
+        self.assertLessEqual(abs(after["B"][2] - 220.0), 40.0)
+
+    def test_into_a_gap(self):
+        p = set_lines(set_lines(chip(), "L", ["A", "", "B"]), "T", ["X"])
+        before = self.centres(p)
+        lay = p.layout()
+        a = next(q for q in lay.pins if q.name == "A")
+        place_line(p, "T", 0, "L", 120 + a.b + 40)  # the middle of the spacer slot
+        self.assertEqual(p.physical_lines("L"), ["A", "X", "B"])
+        after = self.centres(p)
+        self.assertEqual((after["A"], after["B"]), (before["A"], before["B"]))
+
+    def test_inside_the_pads_reorders(self):
+        p = set_lines(chip(), "L", ["A", "B", "C"])
+        lay = p.layout()
+        c = next(q for q in lay.pins if q.name == "C")
+        place_line(p, "L", 0, "L", 120 + c.a + 1)  # onto C: as before, sorted in
+        self.assertEqual(p.physical_lines("L"), ["B", "A", "C"])
+
+    def test_start_alignment(self):
+        p = set_lines(chip(), "B", ["A", "B"])
+        p.settings.align = "start"
+        before = self.centres(p)
+        place_line(p, "B", 0, "B", 120 + 1000.0)
+        after = self.centres(p)
+        self.assertEqual(after["B"], before["B"])
+        self.assertLessEqual(abs(after["A"][1] - 1120.0), 40.0)
+        lines = p.physical_lines("B")
+        self.assertEqual((lines[:2], len(lines)), (["", "B"], 13))  # nothing added at the anchored corner
+
+    def test_near_the_corner_stays_on_the_side(self):
+        p = set_lines(chip(), "L", ["A", "B", "C"])  # side space 1200 µm
+        die = p.layout().die_height
+        before = self.centres(p)
+        place_line(p, "L", 0, "L", die - 125.0)  # just inside the corner
+        after = self.centres(p)
+        self.assertEqual(p.layout().die_height, die)  # no growth
+        self.assertEqual((after["B"], after["C"]), (before["B"], before["C"]))
+        self.assertGreater(after["A"][2], before["C"][2])
+
+    def test_right_after_the_last_pad_sorts_in(self):
+        p = set_lines(chip(), "L", ["A", "B", "C"])
+        lay = p.layout()
+        c = next(q for q in lay.pins if q.name == "C")
+        place_line(p, "L", 0, "L", 120 + c.b + 1)
+        self.assertEqual(p.physical_lines("L"), ["B", "C", "A"])
+
+    def test_locked_raises(self):
+        p = set_lines(chip(), "L", ["A [lock]", "B"])
+        with self.assertRaises(ValueError):
+            place_line(p, "L", 0, "L", 1100.0)
 
 class DemoTests(unittest.TestCase):
     def test_demo_project(self):
