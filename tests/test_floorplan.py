@@ -45,6 +45,17 @@ class LefTests(unittest.TestCase):
         self.assertEqual(pick_macro(parse_lef(text), "adc_sar").name, "adc_sar_top")
         self.assertEqual(pick_macro(parse_lef("MACRO x\n SIZE 1 BY 2 ;\nEND x\n"), "adc_sar").name, "x")
 
+    def test_property_definitions_block_skipped(self):
+        text = ("PROPERTYDEFINITIONS\n  MACRO CatenaDesignType STRING ;\n  PIN pinprop STRING ;\n"
+                "END PROPERTYDEFINITIONS\n" + FIXTURE.read_text())
+        (m,) = parse_lef(text)
+        self.assertEqual((m.name, len(m.pins)), ("adc_sar_top", 7))
+
+    def test_rect_mask_ignored(self):
+        (m,) = parse_lef("MACRO o\n SIZE 100 BY 50 ;\n PIN A\n  PORT\n   LAYER M1 ;\n"
+                         "    RECT MASK 2 10 10 20 20 ;\n  END\n END A\nEND o\n")
+        self.assertEqual((m.pins[0].x, m.pins[0].y), (15.0, 35.0))
+
     def test_no_macro_raises(self):
         with self.assertRaises(ValueError):
             parse_lef("VERSION 5.8 ;\n")
@@ -98,6 +109,7 @@ class FloorplanTests(unittest.TestCase):
 
     def test_overlap_and_outside_core_warning(self):
         p = cp.Project()
+        p.settings.fixed_core = True  # the core fits the die, only the macro warnings remain
         p.settings.core_width, p.settings.core_height = 300.0, 300.0
         p.floorplan.macros = [adc("a0"), adc("a1", x=100.0)]
         w = floorplan_warnings(p)
@@ -105,6 +117,16 @@ class FloorplanTests(unittest.TestCase):
         self.assertIn("Macro a0 outside the core", w)
         p.settings.core_width, p.settings.core_height = 2000.0, 2000.0
         p.floorplan.macros[1].x = 500.0
+        self.assertEqual(floorplan_warnings(p), [])
+
+    def test_core_larger_than_die_warning(self):
+        p = cp.Project()
+        p.settings.fixed_die = True
+        p.settings.die_width = p.settings.die_height = 1500.0
+        p.floorplan.macros = [adc()]
+        w = floorplan_warnings(p)
+        self.assertIn("Core 1500 × 1200 µm does not fit the core area of the die (1260 × 1260 µm)", w)
+        p.settings.fixed_die, p.settings.fixed_core = False, True
         self.assertEqual(floorplan_warnings(p), [])
 
     def test_utilization(self):

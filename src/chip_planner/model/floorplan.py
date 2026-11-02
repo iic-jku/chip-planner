@@ -199,14 +199,23 @@ def _overlap(a, b):
     return a.x < b.x + bw and b.x < a.x + aw and a.y < b.y + bh and b.y < a.y + ah
 
 
+def overlapping(macros) -> List[Tuple[Macro, Macro]]:
+    """Pairs of overlapping macros."""
+    return [(a, b) for i, a in enumerate(macros) for b in macros[i + 1:] if _overlap(a, b)]
+
+
 def floorplan_warnings(project) -> List[str]:
     st = project.settings.sanitized()
     macros = project.floorplan.macros
     out = []
-    for i, a in enumerate(macros):
-        for b in macros[i + 1:]:
-            if _overlap(a, b):
-                out.append(f"Macros {a.name} and {b.name} overlap")
+    if macros:
+        lay = project.layout()
+        m = lay.ring_depth + lay.core_margin
+        aw, ah = lay.die_width - 2 * m, lay.die_height - 2 * m
+        if st.core_width > aw + 1e-6 or st.core_height > ah + 1e-6:
+            out.append(f"Core {st.core_width:g} × {st.core_height:g} µm does not fit the core area "
+                       f"of the die ({aw:g} × {ah:g} µm)")
+    out += [f"Macros {a.name} and {b.name} overlap" for a, b in overlapping(macros)]
     eps = 1e-6
     for m in macros:
         w, h = m.size()

@@ -2,10 +2,10 @@
 
 import math
 
-from ..model.floorplan import core_origin, floorplan_warnings, nearest_side
+from ..model.floorplan import core_origin, nearest_side, overlapping
 from ..model.parse import classify
 from .qt import (QBrush, QColor, QFont, QGraphicsItem, QGraphicsRectItem, QGraphicsSimpleTextItem, QPointF,
-                 QRectF, Qt, QTransform)
+                 QRectF, Qt, QTimer, QTransform)
 from .scene import fill_scene, make_pen, mono_family
 
 MAX_GRID_LINES = 60  # per axis; a denser grid is drawn with every n-th line only
@@ -72,8 +72,8 @@ class MacroItem(QGraphicsRectItem):
             self.ctx["on_release"](self.macro)
 
     def mouseDoubleClickEvent(self, e):
-        if self.ctx.get("on_rotate"):
-            self.ctx["on_rotate"](self.macro)
+        if self.ctx.get("on_rotate"):  # later: rotating rebuilds the scene, which deletes this item
+            QTimer.singleShot(0, lambda m=self.macro, f=self.ctx["on_rotate"]: f(m))
         e.accept()
 
 
@@ -129,11 +129,7 @@ def fill_floorplan(scene, project, layout, pal, show_grid=True, on_move=None, on
     label.setPos(x0, y0 - fs * 1.4)  # above the core, macros may cover its corners
     label.setZValue(0.7)
 
-    bad = set()
-    for w in floorplan_warnings(project):
-        if w.startswith("Macros "):
-            a, b = w[len("Macros "):-len(" overlap")].split(" and ")
-            bad |= {a, b}
+    bad = {m.name for pair in overlapping(project.floorplan.macros) for m in pair}
     ctx = {"origin": (x0, y0), "grid": st.grid, "core": (cw, ch), "on_release": on_release, "on_rotate": on_rotate}
     items = []
     for m in project.floorplan.macros:

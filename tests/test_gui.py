@@ -240,6 +240,40 @@ class FloorplanGui(unittest.TestCase):
         w.set_project(p)
         self.assertEqual(w.get_project().floorplan, p.floorplan)
 
+    def test_double_click_rotates_every_time(self):
+        from PySide6.QtCore import QPoint
+        from PySide6.QtTest import QTest
+        from chip_planner.gui.qt import Qt
+        w = self.win
+        w.resize(1200, 800)
+        w.show()
+        w.tabs.setCurrentWidget(w.fp_page)
+        w.add_macro_dir(str(MACRO_DIR))
+        self.app.processEvents()
+        for expected in (90, 180):
+            item = w.macro_items[0]
+            pos = w.fp_view.mapFromScene(item.sceneBoundingRect().center())
+            QTest.mouseDClick(w.fp_view.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+                              QPoint(pos.x(), pos.y()))
+            QTest.qWait(50)
+            self.assertEqual(w.floorplan.macros[0].rot, expected)
+            QTest.qWait(700)
+
+    def test_odd_instance_names_do_not_break_render(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        w.add_macro_dir(str(MACRO_DIR))
+        w.floorplan.macros[0].name = "a and b"
+        w.floorplan.macros[1].x = 0.0
+        w.render()
+        self.assertIn("Macros a and b and adc_sar1 overlap", w.fp_warn.text())
+        box = w.macro_panel.boxes[1]
+        from chip_planner.gui.qt import QLineEdit
+        edit = box.findChild(QLineEdit)
+        edit.setText("bad name")
+        edit.editingFinished.emit()
+        self.assertEqual(w.floorplan.macros[1].name, "adc_sar1")
+
     def test_placeholder(self):
         w = self.win
         w.add_placeholder("digital", 600.0, 400.0)

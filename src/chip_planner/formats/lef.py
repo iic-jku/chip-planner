@@ -44,16 +44,22 @@ def parse_lef(text) -> List[MacroDef]:
     origin = (0.0, 0.0)
     pin_shape = None        # bounding box of the first shape of the current pin
     shapes = {}             # pin name -> bounding box (x0, y0, x1, y1) in LEF coordinates
-    in_obs = in_port = False
+    in_obs = in_port = in_propdefs = False
     for st in _statements(text):
         key = st[0].upper()
+        if in_propdefs:  # property declarations look like MACRO/PIN statements
+            in_propdefs = not (key == "END" and len(st) > 1 and st[1].upper() == "PROPERTYDEFINITIONS")
+            continue
         if in_obs:
             if key == "END" and len(st) == 1:
                 in_obs = False
             continue
-        if key == "MACRO" and len(st) > 1:
+        if key == "PROPERTYDEFINITIONS":
+            in_propdefs = True
+        elif key == "MACRO" and len(st) > 1:
             macro = MacroDef(st[1], 0.0, 0.0)
             origin, shapes = (0.0, 0.0), {}
+            pin, in_port = None, False
         elif macro is None:
             continue
         elif key == "ORIGIN":
@@ -76,7 +82,10 @@ def parse_lef(text) -> List[MacroDef]:
             elif key == "PORT":
                 in_port = True
             elif key in ("RECT", "POLYGON") and in_port and pin_shape is None:
-                c = _coords(st[1:])
+                args = st[1:]
+                if args and args[0].upper() == "MASK":  # RECT MASK n x1 y1 x2 y2
+                    args = args[2:]
+                c = _coords(args)
                 if len(c) >= 4:
                     xs, ys = c[0::2], c[1::2]
                     pin_shape = (min(xs), min(ys), max(xs), max(ys))

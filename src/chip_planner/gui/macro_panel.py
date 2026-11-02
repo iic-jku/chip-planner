@@ -65,7 +65,9 @@ class MacroPanel(QWidget):
 
         def rename(m=m, name=name):
             new = name.text().strip()
-            if new and new != m.name and all(o.name != new for o in self.floorplan.macros):
+            # names end up in pad names and Verilog identifiers: no whitespace
+            if new and new != m.name and not any(c.isspace() for c in new) \
+                    and all(o.name != new for o in self.floorplan.macros):
                 m.name = new
                 self.on_change(False)
             else:
