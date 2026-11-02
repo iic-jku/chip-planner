@@ -65,7 +65,7 @@ class GuiSmoke(unittest.TestCase):
     def test_fixed_die_setting(self):
         w = self.win
         self.assertFalse(w.sp_die_w.isEnabled())
-        w.chk_fixed.setChecked(True)  # starts from the current pad-limited size
+        w.cb_die.setCurrentIndex(w.cb_die.findData("die"))  # starts from the current pad-limited size
         self.assertEqual((w.sp_die_w.value(), w.sp_die_h.value()), (1780.0, 1700.0))
         self.assertTrue(w.sp_die_w.isEnabled() and not w.chk_square.isEnabled())
         w.sp_die_w.setValue(2500)
@@ -73,9 +73,27 @@ class GuiSmoke(unittest.TestCase):
         self.assertEqual(w.layout_data.die_width, 2500)
         self.assertEqual(w.stat_cap["die"].text(), "DIE (FIXED)")
         self.assertTrue(w.get_project().settings.fixed_die)
-        w.chk_fixed.setChecked(False)
+        w.cb_die.setCurrentIndex(w.cb_die.findData("pads"))
         w.render()
         self.assertEqual(w.layout_data.die_width, 1780)
+
+    def test_fixed_core_setting(self):
+        w = self.win
+        self.assertFalse(w.sp_core_w.isEnabled())
+        w.cb_die.setCurrentIndex(w.cb_die.findData("core"))
+        self.assertTrue(w.sp_core_w.isEnabled() and w.chk_square.isEnabled() and not w.sp_die_w.isEnabled())
+        w.chk_square.setChecked(False)
+        w.sp_core_w.setValue(3000)
+        w.sp_core_h.setValue(2500)
+        w.sp_grid.setValue(5)
+        w.render()
+        st = w.get_project().settings
+        self.assertEqual((st.fixed_core, st.fixed_die, st.core_width, st.core_height, st.grid),
+                         (True, False, 3000.0, 2500.0, 5.0))
+        self.assertEqual(w.layout_data.die_width, 3000 + 2 * w.layout_data.ring_depth)
+        self.assertEqual(w.stat_cap["die"].text(), "DIE (MIN. CORE)")
+        w.set_project(w.get_project())
+        self.assertEqual(w.cb_die.currentData(), "core")
 
     def test_pdk_and_librelane_tab(self):
         w = self.win
@@ -112,7 +130,7 @@ class GuiSmoke(unittest.TestCase):
 
     def test_layout_of_window(self):
         tabs = [self.win.tabs.tabText(i) for i in range(self.win.tabs.count())]
-        self.assertEqual(tabs, ["Preview", "Pin List", "Settings", "LibreLane"])
+        self.assertEqual(tabs, ["Padframe", "Pin List", "Settings", "LibreLane"])
         for mode in ("ccw", "cw"):
             self.win.cb_mode.setCurrentIndex(self.win.cb_mode.findData(mode))
             self.win.render()

@@ -25,6 +25,7 @@ LAST_STATE = CONFIG_DIR / "last-qt.json"
 MODE_LABELS = [("ccw", "Counter-clockwise from top left (package)"),
                ("cw", "Clockwise from top left")]
 ALIGN_LABELS = [("center", "Centered"), ("start", "From start corner")]
+DIE_MODES = [("pads", "Pad-limited"), ("die", "Fixed die size"), ("core", "Fixed core size (minimum)")]
 # Editors list each side in physical order, as seen on the die
 EDITOR_DIR = {"T": "left → right", "R": "top → bottom", "B": "left → right", "L": "top → bottom"}
 PAD_FIELDS = ("pitch", "w", "h")
@@ -158,7 +159,7 @@ class MainWindow(QMainWindow):
         self.warn.setWordWrap(True)
         self.warn.setStyleSheet(f"color: {pal['warn']};")
         pvl.addWidget(self.warn)
-        tabs.addTab(pv, "Preview")
+        tabs.addTab(pv, "Padframe")
 
         pl = QWidget()
         pll = QVBoxLayout(pl)
@@ -195,11 +196,13 @@ class MainWindow(QMainWindow):
         self.cb_mode.currentIndexChanged.connect(self.mode_changed)
         self.cb_align.currentIndexChanged.connect(self.changed)
         self.chk_square.toggled.connect(self.changed)
-        self.chk_fixed.toggled.connect(self.fixed_die_toggled)
+        self.cb_die.currentIndexChanged.connect(self.die_mode_changed)
         self.cb_pdk.currentIndexChanged.connect(self.pdk_changed)
         self.cb_pkg.currentIndexChanged.connect(self.changed)
         self.sp_die_w.valueChanged.connect(self.changed)
         self.sp_die_h.valueChanged.connect(self.changed)
+        for sp in (self.sp_core_w, self.sp_core_h, self.sp_grid):
+            sp.valueChanged.connect(self.changed)
         self.sp_cellh.valueChanged.connect(self.changed)
         for s in self.sp.values():
             s.valueChanged.connect(self.changed)
@@ -237,17 +240,32 @@ class MainWindow(QMainWindow):
 
         die = QGroupBox("Die")
         dg = QGridLayout(die)
-        self.chk_fixed = QCheckBox("Fixed die size")
+        self.cb_die = QComboBox()
+        for key, label in DIE_MODES:
+            self.cb_die.addItem(label, key)
         self.sp_die_w = spin(2000, maximum=50000.0)
         self.sp_die_h = spin(2000, maximum=50000.0)
-        dg.addWidget(self.chk_fixed, 0, 0)
-        dg.addWidget(QLabel("Width"), 0, 1)
-        dg.addWidget(self.sp_die_w, 0, 2)
-        dg.addWidget(QLabel("Height"), 0, 3)
-        dg.addWidget(self.sp_die_h, 0, 4)
-        note = QLabel("Including the IO ring. Unchecked, the die grows with the pads (pad-limited).")
+        self.sp_core_w = spin(1500, maximum=50000.0)
+        self.sp_core_h = spin(1200, maximum=50000.0)
+        self.sp_grid = spin(10, maximum=1000.0)
+        self.sp_grid.setMinimum(0.1)
+        dg.addWidget(QLabel("Size"), 0, 0)
+        dg.addWidget(self.cb_die, 0, 1, 1, 4)
+        for r_, (label, w_, h_) in enumerate((("Die", self.sp_die_w, self.sp_die_h),
+                                             ("Core", self.sp_core_w, self.sp_core_h)), start=1):
+            dg.addWidget(QLabel(label), r_, 0)
+            dg.addWidget(QLabel("Width"), r_, 1)
+            dg.addWidget(w_, r_, 2)
+            dg.addWidget(QLabel("Height"), r_, 3)
+            dg.addWidget(h_, r_, 4)
+        dg.addWidget(QLabel("Floorplan grid"), 3, 0)
+        dg.addWidget(self.sp_grid, 3, 2)
+        note = QLabel("Pad-limited: the die grows with the pads. Fixed die: size including the IO ring. "
+                      "Fixed core: the die is at least core + IO ring (+ core margin of the PDK) and grows "
+                      "when the pads need more room.")
+        note.setWordWrap(True)
         note.setStyleSheet(f"color: {pal['muted']};")
-        dg.addWidget(note, 1, 0, 1, 6)
+        dg.addWidget(note, 4, 0, 1, 6)
         dg.setColumnStretch(5, 1)
         sv.addWidget(die)
 
@@ -329,8 +347,8 @@ class MainWindow(QMainWindow):
         act(mf, "Save As…", self.save_file_as, QKeySequence.StandardKey.SaveAs)
         mf.addSeparator()
         act(mf, "Export Pin List as CSV…", self.export_csv)
-        act(mf, "Export Preview as SVG…", self.export_svg)
-        act(mf, "Export Preview as PNG…", self.export_png)
+        act(mf, "Export Padframe as SVG…", self.export_svg)
+        act(mf, "Export Padframe as PNG…", self.export_png)
         act(mf, "Export LibreLane Files…", self.export_librelane_files)
         mf.addSeparator()
         act(mf, "Load Example", self.load_example)
@@ -350,8 +368,10 @@ class MainWindow(QMainWindow):
             square=self.chk_square.isChecked(), cell_height=self.sp_cellh.value(),
             std=PadSettings(*(self.sp[("std", f)].value() for f in PAD_FIELDS)),
             rf=PadSettings(*(self.sp[("rf", f)].value() for f in PAD_FIELDS)),
-            fixed_die=self.chk_fixed.isChecked(),
+            fixed_die=self.cb_die.currentData() == "die",
             die_width=self.sp_die_w.value(), die_height=self.sp_die_h.value(),
+            fixed_core=self.cb_die.currentData() == "core",
+            core_width=self.sp_core_w.value(), core_height=self.sp_core_h.value(), grid=self.sp_grid.value(),
             pdk=self.cb_pdk.currentData() or "", package=self.cb_pkg.currentData() or "",
         )
         project = Project(settings)
@@ -367,9 +387,13 @@ class MainWindow(QMainWindow):
             self.cb_align.setCurrentIndex(max(0, self.cb_align.findData(st.align)))
             self.chk_square.setChecked(st.square)
             self.sp_cellh.setValue(st.cell_height)
-            self.chk_fixed.setChecked(st.fixed_die)
+            self.cb_die.setCurrentIndex(self.cb_die.findData(
+                "die" if st.fixed_die else "core" if st.fixed_core else "pads"))
             self.sp_die_w.setValue(st.die_width)
             self.sp_die_h.setValue(st.die_height)
+            self.sp_core_w.setValue(st.core_width)
+            self.sp_core_h.setValue(st.core_height)
+            self.sp_grid.setValue(st.grid)
             self._update_die_widgets()
             self.cb_pdk.setCurrentIndex(max(0, self.cb_pdk.findData(st.pdk)))
             self.cb_pkg.setCurrentIndex(max(0, self.cb_pkg.findData(st.package)))
@@ -392,8 +416,8 @@ class MainWindow(QMainWindow):
         self.setWindowModified(True)
         self.timer.start()
 
-    def fixed_die_toggled(self, checked):
-        if checked and not self._loading and self.layout_data:
+    def die_mode_changed(self, *_):
+        if self.cb_die.currentData() == "die" and not self._loading and self.layout_data:
             # start from the current pad-limited size
             self._loading = True
             self.sp_die_w.setValue(self.layout_data.die_width)
@@ -434,10 +458,11 @@ class MainWindow(QMainWindow):
                                   "and the LibreLane output.")
 
     def _update_die_widgets(self):
-        fixed = self.chk_fixed.isChecked()
-        self.sp_die_w.setEnabled(fixed)
-        self.sp_die_h.setEnabled(fixed)
-        self.chk_square.setEnabled(not fixed)  # only applies to the pad-limited size
+        mode = self.cb_die.currentData()
+        for sp, on in ((self.sp_die_w, mode == "die"), (self.sp_die_h, mode == "die"),
+                       (self.sp_core_w, mode == "core"), (self.sp_core_h, mode == "core")):
+            sp.setEnabled(on)
+        self.chk_square.setEnabled(mode != "die")  # a fixed die has its own aspect ratio
 
     def mode_changed(self, *_):
         # The editors show physical order, so pads keep their place; only the numbering changes
@@ -476,7 +501,8 @@ class MainWindow(QMainWindow):
         c = lay.counts
         ps = lay.pins_per_side
         self.stat["pads"].setText(f"{len(lay.pins)}  ({ps['T']}/{ps['R']}/{ps['B']}/{ps['L']})")
-        self.stat_cap["die"].setText("DIE (FIXED)" if lay.fixed_die else "DIE (PAD-LIMITED)")
+        self.stat_cap["die"].setText("DIE (FIXED)" if lay.fixed_die else
+                                     "DIE (MIN. CORE)" if lay.core_limited else "DIE (PAD-LIMITED)")
         self.stat["die"].setText(f"{lay.die_width / 1000:.3f} × {lay.die_height / 1000:.3f} mm")
         self.stat["area"].setText(f"{lay.area_mm2:.3f} mm²")
         self.stat["pg"].setText(f"{c['pwr']} / {c['gnd']}")
