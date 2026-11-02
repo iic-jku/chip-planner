@@ -36,7 +36,8 @@ def _pen_brush(pr, pal):
     return make_pen(stroke, width, dash), brush
 
 
-def fill_scene(scene, lay, pal):
+def fill_scene(scene, lay, pal, skip=None):
+    """Draw the layout primitives; ``skip(prim)`` can leave some out."""
     scene.clear()
     scene.setBackgroundBrush(QBrush(QColor(pal["bg"])))
     base_font = QFont(mono_family())
@@ -45,6 +46,8 @@ def fill_scene(scene, lay, pal):
     bold_font.setBold(True)
 
     for pr in lay.prims:
+        if skip and skip(pr):
+            continue
         k = pr["k"]
         item = None
         if k == "rect":

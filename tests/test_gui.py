@@ -496,5 +496,23 @@ class ChipGui(unittest.TestCase):
             if abs(line.y1() - line.y2()) < 1e-9:  # horizontal: the height must hold the pen
                 self.assertGreaterEqual(it.boundingRect().height() + 1e-6, drawn)
 
+    def test_domain_bands_labelled(self):
+        import chip_planner as cp
+        from chip_planner.gui.qt import QGraphicsSimpleTextItem
+        w = self.win
+        w.set_project(cp.load(ROOT / "examples" / "chip_demo.json"))
+
+        def texts():
+            return [it.text() for it in w.scene.items() if isinstance(it, QGraphicsSimpleTextItem) and it.isVisible()]
+
+        t = texts()
+        self.assertGreaterEqual(t.count("ANA"), 3)  # left, top and right section
+        self.assertGreaterEqual(t.count("DIG"), 1)
+        self.assertFalse([x for x in t if x in ("[ANA]", "[DIG]")])  # no labels at the splits any more
+        self.assertIn("ANA 20", w.stat["dom"].text())
+        self.assertIn("DIG 13", w.stat["dom"].text())
+        w.layer_actions["domains"].setChecked(False)
+        self.assertNotIn("ANA", texts())
+
 if __name__ == "__main__":
     unittest.main()

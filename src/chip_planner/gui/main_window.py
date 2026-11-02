@@ -15,7 +15,7 @@ from ..model.parse import format_entry, parse_line, split_lines
 from ..model.pdk import get_package, get_pdk, package_names, pdk_names
 from ..model.project import PadSettings, Project, Settings
 from ..style import EXPORT_PALETTE, PALETTES
-from .chip_view import LAYERS, ChipItems, ChipView, fill_chip
+from .chip_view import LAYERS, ChipItems, ChipView, domain_colors, fill_chip
 from .macro_panel import MacroPanel
 from .qt import (QAbstractItemView, QAction, QActionGroup, QApplication, QBrush, QCheckBox, QColor, QComboBox, QEvent,
                  QFileDialog, QFrame, QGraphicsScene, QGridLayout, QGroupBox, QHBoxLayout, QImage, QInputDialog,
@@ -330,7 +330,7 @@ class MainWindow(QMainWindow):
         cl.addWidget(self.view, 1)
         stats, self.stat, self.stat_cap = self._stat_tiles(
             (("pads", "Pads (T/R/B/L)"), ("die", "Die (pad-limited)"), ("cross", "Crossings"),
-             ("len", "Longest analog/RF flyline"), ("mac", "Macros · utilization")))
+             ("len", "Longest analog/RF flyline"), ("mac", "Macros · utilization"), ("dom", "Domains")))
         cl.addLayout(stats)
         self.warn = QLabel()
         self.warn.setWordWrap(True)
@@ -961,6 +961,10 @@ class MainWindow(QMainWindow):
         lg = check.longest
         self.stat["len"].setText(f"{lg.pad} {round(lg.length)} µm" if lg else "–")
         self.stat["mac"].setText(f"{len(self.floorplan.macros)} · {100 * utilization(view_project, lay):.1f} %")
+        colors = domain_colors(lay, self.pal)
+        counts = {d: sum(1 for p in lay.pins if p.domain == d) for d in lay.domains}
+        self.stat["dom"].setText(" ".join(f'<span style="color:{colors[d]}">■</span> {d} {counts[d]}'
+                                          for d in lay.domains) or "–")
         for key, bad in (("cross", check.crossings > 0),
                          ("len", bool(lg and lg.length > project.settings.sanitized().max_flyline))):
             self.stat[key].setStyleSheet(self.stat[key].styleSheet().split(" color:")[0]

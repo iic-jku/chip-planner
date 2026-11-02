@@ -19,6 +19,56 @@ LAYERS = (("grid", "Grid"), ("pads", "Pads"), ("macros", "Macros"), ("halos", "H
 DOMAIN_TYPES = ("gnd", "ana", "rf", "clk", "pwr")  # palette types whose outline colours the domains
 
 
+def domain_colors(layout, pal):
+    """Colour of each power domain (outline colours of the palette types, in ring order)."""
+    return {d: pal["types"][DOMAIN_TYPES[i % len(DOMAIN_TYPES)]][1] for i, d in enumerate(layout.domains)}
+
+
+def _domain_bands(scene, layout, pal, fs):
+    """Wide bands inside the IO ring, one per domain section of a side, with the domain name in
+    them; the power splits are drawn as cuts through ring and band."""
+    colors = domain_colors(layout, pal)
+    H, W, D = layout.ring_depth, layout.die_width, layout.die_height
+    bh = fs * 1.15
+    for s in "TRBL":
+        pins = sorted((p for p in layout.pins if p.side == s), key=lambda p: p.a)
+        sections = []
+        for p in pins:
+            if sections and sections[-1][0] == p.domain and not any(
+                    sp.side == s and sections[-1][2] <= sp.a < p.a for sp in layout.splits):
+                sections[-1][2] = p.b
+            else:
+                sections.append([p.domain, p.a, p.b])
+        for dom, a, b in sections:
+            if dom not in colors:
+                continue
+            a, b = H + a, H + b
+            rect = {"T": (a, H, b - a, bh), "B": (a, D - H - bh, b - a, bh),
+                    "L": (H, a, bh, b - a), "R": (W - H - bh, a, bh, b - a)}[s]
+            band = scene.addRect(QRectF(*rect), make_pen(None), QBrush(QColor(colors[dom])))
+            band.setOpacity(0.85)
+            band.setZValue(1)
+            label = text_item(scene, dom, fs * 0.8, pal["bg"], bold=True)
+            k = fs * 0.8 / 100
+            tw, th = label.boundingRect().width() * k, label.boundingRect().height() * k
+            if tw * 1.2 > b - a:
+                label.setVisible(False)  # section too short for its name
+            cx, cy = rect[0] + rect[2] / 2, rect[1] + rect[3] / 2
+            if s in "LR":  # reads bottom to top
+                label.setRotation(-90)
+                label.setPos(cx - th / 2, cy + tw / 2)
+            else:
+                label.setPos(cx - tw / 2, cy - th / 2)
+            label.setZValue(1.1)
+    for sp in layout.splits:  # the cut: across the ring and the band
+        a, b = H + sp.a, H + sp.b
+        w = max(b - a, fs * 0.35)
+        c = (a + b) / 2
+        rect = {"T": (c - w / 2, 0, w, H + bh), "B": (c - w / 2, D - H - bh, w, H + bh),
+                "L": (0, c - w / 2, H + bh, w), "R": (W - H - bh, c - w / 2, H + bh, w)}[sp.side]
+        scene.addRect(QRectF(*rect), make_pen(None), QBrush(QColor(pal["warn"]))).setZValue(1.2)
+
+
 def pin_type(pin):
     """Palette type of a macro pin, for its marker and flyline."""
     if pin.use == "ANALOG":
@@ -154,8 +204,9 @@ def _marker(scene, x, y, side, text, color, fs):
 def fill_chip(scene, project, layout, check, pal, layers, selected=(), callbacks=None):
     """Draw the chip view; returns :class:`ChipItems`. ``project.floorplan`` is edited by drags."""
     cb = callbacks or {}
+    split_labels = {f"[{sp.domain}]" for sp in layout.splits}  # replaced by the labelled bands
     if "pads" in layers:
-        fill_scene(scene, layout, pal)
+        fill_scene(scene, layout, pal, skip=lambda pr: pr["k"] == "text" and pr.get("text") in split_labels)
     else:
         scene.clear()
         scene.setBackgroundBrush(QBrush(QColor(pal["bg"])))
@@ -184,13 +235,7 @@ def fill_chip(scene, project, layout, check, pal, layers, selected=(), callbacks
     core_label.setZValue(0.6)
 
     if "domains" in layers and layout.domains:
-        colors = {d: pal["types"][DOMAIN_TYPES[i % len(DOMAIN_TYPES)]][1] for i, d in enumerate(layout.domains)}
-        for pin in layout.pins:
-            if pin.domain in colors:
-                r = scene.addRect(QRectF(*_inner_band(layout, pin, fs * 0.35)), make_pen(None),
-                                  QBrush(QColor(colors[pin.domain])))
-                r.setOpacity(0.55)
-                r.setZValue(1)
+        _domain_bands(scene, layout, pal, fs)
     if "pads" in layers:  # lock symbols
         for s in "TRBL":
             for i, line in enumerate(project.physical_lines(s)):
