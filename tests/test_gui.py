@@ -336,5 +336,62 @@ class ChipGui(unittest.TestCase):
         self.assertIn("Macros a and b and adc_sar1 overlap", w.warn.text())
 
 
+    def test_undo_add_missing_pads(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        w.floorplan.macros[0].io = ["VIN_P"]
+        w.floorplan_changed(False)
+        before = w.get_project()
+        w.add_missing_pads()
+        self.assertIn("VIN_P [analog]", self.lines("L"))
+        w.undo()
+        self.assertEqual(w.get_project(), before)
+        w.redo()
+        self.assertIn("VIN_P [analog]", self.lines("L"))
+
+    def test_undo_redo_macro_drag(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        item = w.chip_items.macros[0]
+        x0, y0 = item.ctx["origin"]
+        item.ctx["on_press"](item.macro)
+        item.setPos(x0 + 300.0, y0 + 200.0)
+        item.ctx["on_release"](item.macro)
+        self.assertEqual((w.floorplan.macros[0].x, w.floorplan.macros[0].y), (300.0, 200.0))
+        w.undo()
+        self.assertEqual((w.floorplan.macros[0].x, w.floorplan.macros[0].y), (0.0, 0.0))
+        w.undo()  # adding the macro
+        self.assertEqual(w.floorplan.macros, [])
+        w.redo()
+        w.redo()
+        self.assertEqual(w.floorplan.macros[0].x, 300.0)
+
+    def test_undo_typing_session(self):
+        w = self.win
+        w.editors["L"].set_text("A")
+        w.commit()  # what losing the focus does
+        w.editors["L"].set_text("A\nB")
+        w.commit()
+        w.undo()
+        self.assertEqual(self.lines("L"), ["A"])
+
+    def test_settings_are_no_undo_step(self):
+        w = self.win
+        w.editors["L"].set_text("A")
+        w.commit()
+        w.sp_spacing.setValue(42)
+        w.editors["L"].set_text("A\nB")
+        w.commit()
+        w.undo()
+        self.assertEqual((self.lines("L"), w.sp_spacing.value()), (["A"], 42.0))
+
+    def test_undo_cleared_on_new(self):
+        w = self.win
+        w.editors["L"].set_text("A")
+        w.commit()
+        self.assertTrue(w.undo_stack)
+        w.load_example()
+        self.assertEqual((w.undo_stack, w.redo_stack), ([], []))
+
 if __name__ == "__main__":
     unittest.main()

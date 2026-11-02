@@ -16,7 +16,7 @@ from ..model.project import PadSettings, Project, Settings
 from ..style import EXPORT_PALETTE
 from .chip_view import LAYERS, ChipItems, ChipView, fill_chip
 from .macro_panel import MacroPanel
-from .qt import (QAbstractItemView, QAction, QApplication, QBrush, QCheckBox, QColor, QComboBox,
+from .qt import (QAbstractItemView, QAction, QApplication, QBrush, QCheckBox, QColor, QComboBox, QEvent,
                  QFileDialog, QFrame, QGraphicsScene, QGridLayout, QGroupBox, QHBoxLayout, QImage, QInputDialog,
                  QKeySequence, QLabel, QMainWindow, QMenu, QMessageBox, QPainter, QPlainTextEdit, QPushButton,
                  QRectF, QSplitter, Qt, QTableWidget, QTableWidgetItem, QTabWidget, QTextCursor, QTimer,
@@ -53,6 +53,8 @@ class MainWindow(QMainWindow):
         self.selected_macros = set()
         self.layers = {k for k, _ in LAYERS}
         self.fp_warnings = []  # from reading the macro LEFs
+        self.undo_stack, self.redo_stack = [], []   # project states (dicts) before/after each step
+        self._current = None
         self._loading = False
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
@@ -70,6 +72,7 @@ class MainWindow(QMainWindow):
         if project is None:
             project = self._read_project(LAST_STATE, quiet=True) or Project.example()
         self.set_project(project)
+        self.reset_history()
         self.setWindowModified(False)
         self._title()
         self.resize(1360, 880)
@@ -94,6 +97,7 @@ class MainWindow(QMainWindow):
         for s in SIDES:
             ed = SideEditor(s, pal)
             ed.edit.textChanged.connect(self.changed)
+            ed.edit.installEventFilter(self)  # losing the focus ends a typing step (undo)
             self.editors[s] = ed
             self.ed_box.addWidget(ed, 1)
 
@@ -446,6 +450,11 @@ class MainWindow(QMainWindow):
         mf.addSeparator()
         act(mf, "Quit", self.close, QKeySequence.StandardKey.Quit)
 
+        me = self.menuBar().addMenu("&Edit")
+        self.act_undo = act(me, "Undo", self.undo, QKeySequence.StandardKey.Undo)
+        self.act_redo = act(me, "Redo", self.redo, QKeySequence.StandardKey.Redo)
+        self.act_redo.setShortcuts([QKeySequence(QKeySequence.StandardKey.Redo), QKeySequence("Ctrl+Y")])
+
         mv = self.menuBar().addMenu("&View")
         act(mv, "Zoom In", lambda: self.view.zoom(1.25, False), QKeySequence.StandardKey.ZoomIn)
         act(mv, "Zoom Out", lambda: self.view.zoom(1 / 1.25, False), QKeySequence.StandardKey.ZoomOut)
@@ -508,6 +517,61 @@ class MainWindow(QMainWindow):
         self.render()
         if fit:
             self.view.fit()
+
+    # ---------- Undo ----------
+
+    UNDO_STEPS = 200
+
+    def _state(self):
+        return self.get_project().to_dict()
+
+    @staticmethod
+    def _with_settings(state, settings_from):
+        """``state`` with the settings of ``settings_from``: settings changes are no undo steps."""
+        out = {k: v for k, v in settings_from.items() if k not in ("sides", "floorplan")}
+        out["sides"] = state["sides"]
+        if "floorplan" in state:
+            out["floorplan"] = state["floorplan"]
+        return out
+
+    def reset_history(self):
+        self.undo_stack, self.redo_stack = [], []
+        self._current = self._state()
+
+    def commit(self):
+        """End an undo step: remember the state before it if pads or macros changed."""
+        if self._current is None:
+            return
+        new = self._state()
+        before = self._with_settings(self._current, new)
+        if before != new:
+            self.undo_stack = (self.undo_stack + [before])[-self.UNDO_STEPS:]
+            self.redo_stack = []
+        self._current = new
+
+    def _restore(self, state):
+        file = self.file
+        self.set_project(Project.from_dict(self._with_settings(state, self._current)), fit=False)
+        self.file = file
+        self.setWindowModified(True)
+        self._current = self._state()
+
+    def undo(self):
+        self.commit()
+        if self.undo_stack:
+            self.redo_stack.append(self._current)
+            self._restore(self.undo_stack.pop())
+
+    def redo(self):
+        self.commit()
+        if self.redo_stack:
+            self.undo_stack.append(self._current)
+            self._restore(self.redo_stack.pop())
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.FocusOut:
+            self.commit()
+        return super().eventFilter(obj, event)
 
     def changed(self, *_):
         if self._loading:
@@ -574,6 +638,7 @@ class MainWindow(QMainWindow):
         if rebuild:
             self.macro_panel.set_floorplan(self.floorplan)
         self.setWindowModified(True)
+        self.commit()
         self.render()
 
     def _ensure_core_mode(self):
@@ -660,11 +725,13 @@ class MainWindow(QMainWindow):
     # ---------- Chip view actions (model edits on a project copy) ----------
 
     def _apply(self, project, message=None):
-        """Show an edited project, keeping file, view and modified state."""
+        """Show an edited project, keeping file, view and modified state; one undo step."""
+        self.commit()  # pending typing is a step of its own
         file = self.file
         self.set_project(project, fit=False)
         self.file = file
         self.setWindowModified(True)
+        self.commit()
         if message:
             self.statusBar().showMessage(message, 8000)
 
@@ -749,6 +816,7 @@ class MainWindow(QMainWindow):
 
     def _macro_released(self, m):
         self.setWindowModified(True)
+        self.commit()
         self.timer.start()
 
     def _guide(self, guide):
@@ -793,6 +861,7 @@ class MainWindow(QMainWindow):
         self._guide_item = None
         self.chip_items = fill_chip(self.scene, view_project, lay, check, self.pal, self.layers,
                                     self.selected_macros, {
+                                        "on_press": lambda m: self.commit(),
                                         "on_release": self._macro_released, "on_rotate": self.rotate_macro,
                                         "on_select": self.select_macro, "on_guide": self._guide})
         if self.view.fit_mode:
@@ -1039,6 +1108,7 @@ class MainWindow(QMainWindow):
     def _reset_to(self, project):
         self.file = None
         self.set_project(project)
+        self.reset_history()
         self.setWindowModified(False)
         self._title()
 
@@ -1062,6 +1132,7 @@ class MainWindow(QMainWindow):
         if project:
             self.file = Path(p)
             self.set_project(project)
+            self.reset_history()
             self.setWindowModified(False)
             self._title()
 
