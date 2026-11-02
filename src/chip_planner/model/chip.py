@@ -81,14 +81,15 @@ def _along(pin_or_split, layout) -> float:
     return layout.ring_depth + (pin_or_split.a + pin_or_split.b) / 2
 
 
-def _pad_names(project) -> Dict[str, Tuple[str, int]]:
-    """Name of every single-pad line → (side, physical line index); first one wins."""
+def _pad_pins(project, layout) -> Dict[str, Tuple[str, int, object]]:
+    """Pad name → (side, physical line index, layout pin); also the signal pads inside RF groups.
+
+    The first pad of a name in ring order wins (shield grounds of groups repeat ``GND``).
+    """
     out = {}
-    for s in SIDES:
-        for i, line in enumerate(project.physical_lines(s)):
-            e = parse_line(line)
-            if e and not e["split"] and not e["group"] and e["name"] not in out:
-                out[e["name"]] = (s, i)
+    for pin in layout.pins:
+        if pin.name not in out:
+            out[pin.name] = (pin.side, project.physical_line_index(pin.side, pin.line), pin)
     return out
 
 
@@ -190,7 +191,7 @@ def analyse(project, layout=None) -> ChipCheck:
     macros = project.floorplan.macros
 
     by_line = _pins_by_line(project, layout)
-    names = _pad_names(project)
+    names = _pad_pins(project, layout)
     pad_of = _pad_name_of(project)
     pad_class = {}  # pad name -> class taken from a connected macro
     for m in macros:
@@ -199,8 +200,7 @@ def analyse(project, layout=None) -> ChipCheck:
             pt = (x0 + px, y0 + py)
             name = pad_of[(m.name, p.name)]
             if name in names:
-                side, i = names[name]
-                pin = by_line[(side, i)][0]
+                side, i, pin = names[name]
                 q = _inner_point(layout, side, _along(pin, layout))
                 cls = m.cls if m.cls != "normal" else _type_class(pin.type)
                 if m.cls != "normal":

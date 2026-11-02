@@ -49,6 +49,15 @@ class AnalyseTests(unittest.TestCase):
         self.assertEqual((fl["VIN_P"].side, fl["VIN_P"].pad), ("L", "VIN_P"))
         self.assertEqual(c.missing, [])
 
+    def test_flyline_to_group_signal_pad(self):
+        p = chip(sides={"L": ["RFIN [gsg]"]}, macros=[box("lna", 0.0, 0.0)])
+        p.floorplan.macros[0].cache.pins.append(cp.model.floorplan.MacroPin("RFIN", "INPUT", "SIGNAL", 0.0, 50.0))
+        p.floorplan.macros[0].io = ["RFIN"]
+        lay = p.layout()
+        (f,) = analyse(p, lay).flylines
+        rfin = next(q for q in lay.pins if q.name == "RFIN")
+        self.assertEqual((f.pad, f.side, f.line, f.q), ("RFIN", "L", 0, (120.0, 120.0 + (rfin.a + rfin.b) / 2)))
+
     def test_crossings(self):
         p = set_lines(chip(macros=[adc()]), "L", ["VIN_N", "VIN_P"])
         c = analyse(p)
