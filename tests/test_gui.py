@@ -77,9 +77,42 @@ class GuiSmoke(unittest.TestCase):
         w.render()
         self.assertEqual(w.layout_data.die_width, 1780)
 
+    def test_pdk_and_librelane_tab(self):
+        w = self.win
+        w.cb_pdk.setCurrentIndex(w.cb_pdk.findData("ihp-sg13g2"))
+        self.assertFalse(w.sp[("std", "w")].isEnabled() or w.sp_cellh.isEnabled())
+        self.assertGreaterEqual(w.sp[("std", "pitch")].value(), 80)
+        w.render()
+        self.assertEqual(w.layout_data.ring_depth, 320)
+        self.assertTrue(all(p.cell for p in w.layout_data.pins))
+        w.tabs.setCurrentWidget(w.ll_page)
+        self.assertEqual(list(w.ll_texts), ["padring_config.yaml", "pad_cfg.tcl", "chip_top.sv",
+                                            "chip_core_template.sv"])
+        w.cb_pkg.setCurrentIndex(w.cb_pkg.findData("OP_QFN64_9x9mm_A4_FIT"))
+        w.render()
+        self.assertIn("PACKAGE_NAME: OP_QFN64_9x9mm_A4_FIT", w.ll_texts["bondplan_pinout.yaml"].toPlainText())
+        self.assertEqual(w.get_project().settings.pdk, "ihp-sg13g2")
+
+    def test_function_combo_rewrites_line(self):
+        w = self.win
+        w.cb_pdk.setCurrentIndex(w.cb_pdk.findData("ihp-sg13g2"))
+        w.render()
+        from pad_ring_planer.gui.main_window import COL
+        row = next(r for r, p in enumerate(w.layout_data.pins) if p.name == "RST_N")
+        cb = w.table.cellWidget(row, COL["Function"])
+        cb.setCurrentIndex(cb.findData("inout"))
+        self.assertIn("RST_N [io]", w.editors["L"].text())
+        w.render()
+        row = next(r for r, p in enumerate(w.layout_data.pins) if p.name == "RST_N")
+        drive = w.table.cellWidget(row, COL["Drive"])
+        drive.setCurrentIndex(drive.findData(16))
+        self.assertIn("RST_N [io] [16mA]", w.editors["L"].text())
+        w.render()
+        self.assertEqual(next(p.cell for p in w.layout_data.pins if p.name == "RST_N"), "sg13g2_IOPadInOut16mA")
+
     def test_layout_of_window(self):
         tabs = [self.win.tabs.tabText(i) for i in range(self.win.tabs.count())]
-        self.assertEqual(tabs, ["Preview", "Pin List", "Settings"])
+        self.assertEqual(tabs, ["Preview", "Pin List", "Settings", "LibreLane"])
         for mode in ("ccw", "cw"):
             self.win.cb_mode.setCurrentIndex(self.win.cb_mode.findData(mode))
             self.win.render()

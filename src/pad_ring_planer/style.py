@@ -49,4 +49,6 @@ def shape_style(prim, pal):
         "free": (pal["line"], 1.0, [3, 3], None),
         "group": (pal["types"]["rf"][1], 1.4, [5, 3], None),
         "pin1": (None, 0.0, None, pal["fg"]),
+        "iocell": (pal["muted"], 1.0, None, None),
+        "split": (pal["warn"], 1.5, None, pal["warn"]),
     }[s]

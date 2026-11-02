@@ -37,6 +37,8 @@ class Settings:
     fixed_die: bool = False      # use die_width × die_height instead of growing with the pads
     die_width: float = 2000.0    # fixed die size in µm, including the IO ring
     die_height: float = 2000.0
+    pdk: str = ""                # PDK profile (see model.pdk), "" = generic planning without IO cells
+    package: str = ""            # package profile for the bonding, "" = none
 
     def sanitized(self):
         """Copy with invalid numbers replaced by defaults (what the layout actually uses)."""
@@ -47,7 +49,8 @@ class Settings:
 
         return Settings(self.mode if self.mode in ORDER else "ccw", self.align, bool(self.square),
                         num(self.cell_height, 120.0), pads(self.std, d_std), pads(self.rf, d_rf),
-                        bool(self.fixed_die), num(self.die_width, 2000.0), num(self.die_height, 2000.0))
+                        bool(self.fixed_die), num(self.die_width, 2000.0), num(self.die_height, 2000.0),
+                        str(self.pdk or ""), str(self.package or ""))
 
 
 def text_to_lines(text):
@@ -122,6 +125,7 @@ class Project:
             "std": {"pitch": st.std.pitch, "w": st.std.w, "h": st.std.h},
             "rf": {"pitch": st.rf.pitch, "w": st.rf.w, "h": st.rf.h},
             "fixed_die": st.fixed_die, "die_w": st.die_width, "die_h": st.die_height,
+            "pdk": st.pdk, "package": st.package,
             "sides": {s: self.side_text(s) for s in SIDES},
         }
 
@@ -138,6 +142,8 @@ class Project:
             fixed_die=bool(st["fixed_die"]),
             die_width=num(st["die_w"], 2000.0),
             die_height=num(st["die_h"], 2000.0),
+            pdk=str(st["pdk"] or ""),
+            package=str(st["package"] or ""),
         )
         # Older versions ignored empty lines at the end of a side; drop them to keep the layout
         return cls(settings, {s: split_lines(str(st["sides"][s] or "")) for s in SIDES})
@@ -151,7 +157,7 @@ def normalize_state(st):
     """Fill in defaults. Also accepts files of the Tk/web versions (flat ``pitch``)."""
     base = default_state()
     out = dict(base)
-    for k in ("mode", "align", "square", "cellh", "fixed_die", "die_w", "die_h"):
+    for k in ("mode", "align", "square", "cellh", "fixed_die", "die_w", "die_h", "pdk", "package"):
         if k in st:
             out[k] = st[k]
     if "std" in st:

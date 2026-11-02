@@ -2,15 +2,17 @@
 
 import csv
 
-from ..model.constants import SIDE_NAMES, TYPE_NAMES
+from ..model.constants import FUNCTION_NAMES, SIDE_NAMES, TYPE_NAMES
 
-HEADER = ("Pin", "Side", "Name", "Type", "Pad W [µm]", "Pad H [µm]", "Pitch [µm]", "X [µm]", "Y [µm]")
+HEADER = ("Pin", "Side", "Name", "Type", "Function", "IO cell", "Domain", "Package pin",
+          "Pad W [µm]", "Pad H [µm]", "Pitch [µm]", "X [µm]", "Y [µm]")
 
 
 def rows(layout):
     """One tuple per pin, values formatted as in the pin list. X/Y: bond pad centre, origin lower-left."""
-    return [(p.no, SIDE_NAMES[p.side], p.name, TYPE_NAMES[p.type], f"{p.w:g}", f"{p.h:g}",
-             f"{p.pitch:g}", f"{p.x:.1f}", f"{p.y:.1f}") for p in layout.pins]
+    return [(p.no, SIDE_NAMES[p.side], p.name, TYPE_NAMES[p.type], FUNCTION_NAMES[p.function], p.cell,
+             p.domain, p.package_pin or "", f"{p.w:g}", f"{p.h:g}", f"{p.pitch:g}", f"{p.x:.1f}",
+             f"{p.y:.1f}") for p in layout.pins]
 
 
 def to_tsv(layout):

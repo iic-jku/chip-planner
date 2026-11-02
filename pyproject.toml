@@ -19,3 +19,6 @@ version = { attr = "pad_ring_planer.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+pad_ring_planer = ["data/*.json", "data/pdks/*.json"]

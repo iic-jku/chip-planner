@@ -1,0 +1,557 @@
+{
+ "_source": "EUROPRACTICE package library EP_PACKAGES_08022018.gds (cell names); pin numbering counter-clockwise, seen from the top",
+ "packages": [
+  {
+   "name": "OP_QFN16_A4_FIT",
+   "label": "QFN16 (OP_QFN16_A4_FIT)",
+   "pins": 16,
+   "segments": [
+    [
+     "L",
+     4
+    ],
+    [
+     "B",
+     4
+    ],
+    [
+     "R",
+     4
+    ],
+    [
+     "T",
+     4
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN24_A4_FIT",
+   "label": "QFN24 (OP_QFN24_A4_FIT)",
+   "pins": 24,
+   "segments": [
+    [
+     "L",
+     6
+    ],
+    [
+     "B",
+     6
+    ],
+    [
+     "R",
+     6
+    ],
+    [
+     "T",
+     6
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN32_A4_FIT",
+   "label": "QFN32 (OP_QFN32_A4_FIT)",
+   "pins": 32,
+   "segments": [
+    [
+     "L",
+     8
+    ],
+    [
+     "B",
+     8
+    ],
+    [
+     "R",
+     8
+    ],
+    [
+     "T",
+     8
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN40_6x6mm_A4_FIT",
+   "label": "QFN40 (OP_QFN40_6x6mm_A4_FIT)",
+   "pins": 40,
+   "segments": [
+    [
+     "L",
+     10
+    ],
+    [
+     "B",
+     10
+    ],
+    [
+     "R",
+     10
+    ],
+    [
+     "T",
+     10
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN48_A4_FIT",
+   "label": "QFN48 (OP_QFN48_A4_FIT)",
+   "pins": 48,
+   "segments": [
+    [
+     "L",
+     12
+    ],
+    [
+     "B",
+     12
+    ],
+    [
+     "R",
+     12
+    ],
+    [
+     "T",
+     12
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN56_A4_FIT",
+   "label": "QFN56 (OP_QFN56_A4_FIT)",
+   "pins": 56,
+   "segments": [
+    [
+     "L",
+     14
+    ],
+    [
+     "B",
+     14
+    ],
+    [
+     "R",
+     14
+    ],
+    [
+     "T",
+     14
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN64_9x9mm_A4_FIT",
+   "label": "QFN64 (OP_QFN64_9x9mm_A4_FIT)",
+   "pins": 64,
+   "segments": [
+    [
+     "L",
+     16
+    ],
+    [
+     "B",
+     16
+    ],
+    [
+     "R",
+     16
+    ],
+    [
+     "T",
+     16
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN80_12x12mm_A4",
+   "label": "QFN80 (OP_QFN80_12x12mm_A4)",
+   "pins": 80,
+   "segments": [
+    [
+     "L",
+     20
+    ],
+    [
+     "B",
+     20
+    ],
+    [
+     "R",
+     20
+    ],
+    [
+     "T",
+     20
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN88_10x10mm_A4",
+   "label": "QFN88 (OP_QFN88_10x10mm_A4)",
+   "pins": 88,
+   "segments": [
+    [
+     "L",
+     22
+    ],
+    [
+     "B",
+     22
+    ],
+    [
+     "R",
+     22
+    ],
+    [
+     "T",
+     22
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_QFN100_12x12mm_A4",
+   "label": "QFN100 (OP_QFN100_12x12mm_A4)",
+   "pins": 100,
+   "segments": [
+    [
+     "L",
+     25
+    ],
+    [
+     "B",
+     25
+    ],
+    [
+     "R",
+     25
+    ],
+    [
+     "T",
+     25
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "JLCC44_A4",
+   "label": "JLCC44 (JLCC44_A4)",
+   "pins": 44,
+   "segments": [
+    [
+     "T",
+     6
+    ],
+    [
+     "L",
+     11
+    ],
+    [
+     "B",
+     11
+    ],
+    [
+     "R",
+     11
+    ],
+    [
+     "T",
+     5
+    ]
+   ],
+   "pin1": "centre of the top side"
+  },
+  {
+   "name": "JLCC68L_A4",
+   "label": "JLCC68 (JLCC68L_A4)",
+   "pins": 68,
+   "segments": [
+    [
+     "T",
+     9
+    ],
+    [
+     "L",
+     17
+    ],
+    [
+     "B",
+     17
+    ],
+    [
+     "R",
+     17
+    ],
+    [
+     "T",
+     8
+    ]
+   ],
+   "pin1": "centre of the top side"
+  },
+  {
+   "name": "JLCC84_A4",
+   "label": "JLCC84 (JLCC84_A4)",
+   "pins": 84,
+   "segments": [
+    [
+     "T",
+     11
+    ],
+    [
+     "L",
+     21
+    ],
+    [
+     "B",
+     21
+    ],
+    [
+     "R",
+     21
+    ],
+    [
+     "T",
+     10
+    ]
+   ],
+   "pin1": "centre of the top side"
+  },
+  {
+   "name": "CLCC44_A4",
+   "label": "CLCC44 (CLCC44_A4)",
+   "pins": 44,
+   "segments": [
+    [
+     "T",
+     6
+    ],
+    [
+     "L",
+     11
+    ],
+    [
+     "B",
+     11
+    ],
+    [
+     "R",
+     11
+    ],
+    [
+     "T",
+     5
+    ]
+   ],
+   "pin1": "centre of the top side"
+  },
+  {
+   "name": "CLCC68L_A4",
+   "label": "CLCC68 (CLCC68L_A4)",
+   "pins": 68,
+   "segments": [
+    [
+     "T",
+     9
+    ],
+    [
+     "L",
+     17
+    ],
+    [
+     "B",
+     17
+    ],
+    [
+     "R",
+     17
+    ],
+    [
+     "T",
+     8
+    ]
+   ],
+   "pin1": "centre of the top side"
+  },
+  {
+   "name": "CLCC84_A4",
+   "label": "CLCC84 (CLCC84_A4)",
+   "pins": 84,
+   "segments": [
+    [
+     "T",
+     11
+    ],
+    [
+     "L",
+     21
+    ],
+    [
+     "B",
+     21
+    ],
+    [
+     "R",
+     21
+    ],
+    [
+     "T",
+     10
+    ]
+   ],
+   "pin1": "centre of the top side"
+  },
+  {
+   "name": "OP_SOIC16_A4",
+   "label": "SOIC16 (OP_SOIC16_A4)",
+   "pins": 16,
+   "segments": [
+    [
+     "L",
+     8
+    ],
+    [
+     "R",
+     8
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_SOIC20_A4",
+   "label": "SOIC20 (OP_SOIC20_A4)",
+   "pins": 20,
+   "segments": [
+    [
+     "L",
+     10
+    ],
+    [
+     "R",
+     10
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_SOIC24_A4",
+   "label": "SOIC24 (OP_SOIC24_A4)",
+   "pins": 24,
+   "segments": [
+    [
+     "L",
+     12
+    ],
+    [
+     "R",
+     12
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "OP_SOIC28_A4",
+   "label": "SOIC28 (OP_SOIC28_A4)",
+   "pins": 28,
+   "segments": [
+    [
+     "L",
+     14
+    ],
+    [
+     "R",
+     14
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "DIL16_A4",
+   "label": "DIL16 (DIL16_A4)",
+   "pins": 16,
+   "segments": [
+    [
+     "L",
+     8
+    ],
+    [
+     "R",
+     8
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "DIL24_A4",
+   "label": "DIL24 (DIL24_A4)",
+   "pins": 24,
+   "segments": [
+    [
+     "L",
+     12
+    ],
+    [
+     "R",
+     12
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "DIL28_A4_cav7800",
+   "label": "DIL28 (DIL28_A4_cav7800)",
+   "pins": 28,
+   "segments": [
+    [
+     "L",
+     14
+    ],
+    [
+     "R",
+     14
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "DIL40L_A4",
+   "label": "DIL40L (DIL40L_A4)",
+   "pins": 40,
+   "segments": [
+    [
+     "L",
+     20
+    ],
+    [
+     "R",
+     20
+    ]
+   ],
+   "pin1": "top of the left side"
+  },
+  {
+   "name": "DIL48L_A4",
+   "label": "DIL48L (DIL48L_A4)",
+   "pins": 48,
+   "segments": [
+    [
+     "L",
+     24
+    ],
+    [
+     "R",
+     24
+    ]
+   ],
+   "pin1": "top of the left side"
+  }
+ ]
+}

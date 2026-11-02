@@ -1,0 +1,27 @@
+{
+  "mode": "ccw",
+  "align": "center",
+  "square": true,
+  "cellh": 120.0,
+  "std": {
+    "pitch": 115,
+    "w": 60.0,
+    "h": 60.0
+  },
+  "rf": {
+    "pitch": 100.0,
+    "w": 70.0,
+    "h": 70.0
+  },
+  "fixed_die": true,
+  "die_w": 1600,
+  "die_h": 1600,
+  "pdk": "ihp-sg13g2",
+  "package": "OP_QFN32_A4_FIT",
+  "sides": {
+    "T": "bidir[0] [io] [4mA]\nbidir[1] [io] [4mA]\nbidir[2] [io] [4mA]\nbidir[3] [io] [4mA]",
+    "R": "=== ANA\nain[0] [analog]\nain[1] [analog]\nAVDD [vdd]\nAVSS [vss]\nAIOVDD [iovdd]\nAIOVSS [iovss]\n=== MAIN",
+    "B": "out[0] [out]\nout[1] [out]\nout[2] [out]\nout[3] [out]\nout[4] [out]\nout[5] [out]\nout[6] [out]\nout[7] [out]",
+    "L": "clk [in]\nrst_n [in]\nenable\nIOVDD\nIOVSS\nVDD\nVSS\nout[8] [out]"
+  }
+}

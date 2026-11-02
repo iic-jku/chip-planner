@@ -10,14 +10,18 @@ Entry syntax (one line per entry):
   RFIN [gsg]               RF group: GND, RFIN, GND
   LO [gsgsg]               differential: GND, LO_P, GND, LO_N, GND
   RFIN [gs] / [sg]         GS or SG
-Options combine, e.g. ``RFOUT [gsg] {70x70} @125``.
+  NAME [in|out|tri|io|analog|vdd|vss|iovdd|iovss|none]
+                           IO function (selects the IO cell of the PDK), default guessed
+  NAME [16mA]              drive strength of output/tristate/bidirectional cells
+  === NAME                 power split: the IO ring is cut here, power domain NAME starts
+Options combine, e.g. ``RFOUT [gsg] {70x70} @125`` or ``DOUT [out] [4mA]``.
 
 RF pads and all pads in GSG groups use the RF settings (pitch, pad size).
 """
 
 import re
 
-from .constants import GROUPS, TAGS
+from .constants import FUNCTION_TAGS, GROUPS, SPLIT_PREFIX, TAGS
 
 
 def num(v, default, minimum=1.0):
@@ -50,15 +54,23 @@ def classify(name):
 _NUM = r"(\d+(?:[.,]\d+)?)"
 SIZE_RE = re.compile(r"\s*\{\s*" + _NUM + r"\s*[x×*]\s*" + _NUM + r"\s*\}\s*$", re.I)
 PITCH_RE = re.compile(r"\s*@\s*" + _NUM + r"\s*$")
-TAG_RE = re.compile(r"\s*\[([A-Za-z]+)\]\s*$")
+TAG_RE = re.compile(r"\s*\[([A-Za-z0-9]+)\]\s*$")
+DRIVE_RE = re.compile(r"(\d+)ma", re.I)
+TYPE_TAGS = {"pwr": "p", "gnd": "g", "ana": "a", "rf": "rf", "dig": "d", "clk": "c", "nc": "nc"}
+FUNCTION_TYPES = {"vdd": "pwr", "iovdd": "pwr", "vss": "gnd", "iovss": "gnd", "analog": "ana", "none": "nc"}
 
 
 def parse_line(line):
-    """Parse one editor line. Returns ``None`` for a spacer, else an entry dict."""
+    """Parse one editor line. Returns ``None`` for a spacer, else an entry dict.
+
+    A power split line returns ``{"split": True, "domain": name}``.
+    """
     t = line.strip()
     if not t:
         return None
-    typ = size = pitch = group = None
+    if t.startswith(SPLIT_PREFIX):
+        return {"split": True, "domain": t.strip("= \t")}
+    typ = size = pitch = group = function = drive = None
     while True:
         m = SIZE_RE.search(t)
         if m and m.start() > 0:
@@ -77,14 +89,69 @@ def parse_line(line):
                 typ = TAGS[k]
             elif k in GROUPS:
                 group = k
+            elif k in FUNCTION_TAGS:
+                function = FUNCTION_TAGS[k]
+            elif DRIVE_RE.fullmatch(k):
+                drive = int(DRIVE_RE.fullmatch(k).group(1))
             else:
                 break  # e.g. bus name D[3] stays part of the name
             t = t[:m.start()]
             continue
         break
     name = t.strip()
-    return {"name": name, "type": typ, "auto": typ is None, "size": size,
-            "pitch": pitch, "group": group}
+    return {"split": False, "name": name, "type": typ, "auto": typ is None, "size": size,
+            "pitch": pitch, "group": group, "function": function, "drive": drive}
+
+
+def format_entry(e):
+    """Inverse of :func:`parse_line` for pad entries (canonical tag order)."""
+    if e.get("split"):
+        return f"{SPLIT_PREFIX} {e['domain']}".rstrip()
+    parts = [e["name"]]
+    if e["type"] and not e.get("auto"):
+        parts.append(f"[{TYPE_TAGS[e['type']]}]")
+    if e["group"]:
+        parts.append(f"[{e['group']}]")
+    if e.get("function"):
+        parts.append(f"[{'io' if e['function'] == 'inout' else e['function']}]")
+    if e.get("drive"):
+        parts.append(f"[{e['drive']}mA]")
+    if e["size"]:
+        parts.append(f"{{{e['size'][0]:g}x{e['size'][1]:g}}}")
+    if e["pitch"]:
+        parts.append(f"@{e['pitch']:g}")
+    return " ".join(parts)
+
+
+def infer_function(name, typ):
+    """Default IO function of a pad from its name and type."""
+    u = name.upper()
+    if typ == "nc":
+        return "none"
+    if typ in ("pwr", "gnd"):
+        io = "IO" in u
+        return ("io" if io else "") + ("vdd" if typ == "pwr" else "vss")
+    if typ in ("ana", "rf"):
+        return "analog"
+    if typ == "clk":
+        return "in"
+    if re.search(r"OUT|SDO|MISO|TXD?$|_O$|_Q$", u):
+        return "out"
+    if re.search(r"IN|RST|RESET|SCLK|SCK|SDI|MOSI|CS|RXD?$|EN|SEL|_I$", u):
+        return "in"
+    return "inout"
+
+
+def pad_type(name, explicit_type, function):
+    """Pad type (colour class): explicit tag, else from the function, else from the name."""
+    if explicit_type:
+        return explicit_type
+    if function in FUNCTION_TYPES:
+        return FUNCTION_TYPES[function]
+    typ = classify(name)
+    if function and typ in ("pwr", "gnd", "nc", "ana", "rf"):
+        return "dig"  # a signal function overrides a supply-like name
+    return typ
 
 
 def expand(entry, settings):
@@ -100,17 +167,23 @@ def expand(entry, settings):
             pitch = base.pitch
         return {"name": name, "type": typ, "w": w, "h": h, "pitch": pitch}
 
+    def finish(pad, function):
+        pad["function"] = function or infer_function(pad["name"], pad["type"])
+        pad["drive"] = entry.get("drive")
+        return pad
+
     g = entry["group"]
     name = entry["name"]
+    fn = entry.get("function")
     if not g:
-        typ = entry["type"] or classify(name)
-        return [make(name, typ, False)]
-    sig_t = entry["type"] or "rf"
+        typ = pad_type(name, entry["type"], fn)
+        return [finish(make(name, typ, False), fn)]
+    sig_t = entry["type"] or ("rf" if fn in (None, "analog") else pad_type(name, None, fn))
     if g == "gsgsg":
         seq = [("GND", "gnd"), (name + "_P", sig_t), ("GND", "gnd"), (name + "_N", sig_t), ("GND", "gnd")]
     else:
         seq = [(("GND", "gnd") if c == "g" else (name, sig_t)) for c in g]
-    return [make(n, t, True) for n, t in seq]
+    return [finish(make(n, t, True), None if t == "gnd" else fn) for n, t in seq]
 
 
 def split_lines(text):

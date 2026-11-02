@@ -1,0 +1,99 @@
+{
+  "name": "ihp-sg13cmos5l",
+  "label": "IHP SG13CMOS5L",
+  "io_library": "sg13cmos5l_io",
+  "_source": "/foss/pdks/ihp-sg13cmos5l/libs.ref/sg13cmos5l_io/lef/sg13cmos5l_io.lef and libs.tech/librelane/sg13cmos5l_io/config.tcl",
+  "site": 1.0,
+  "cell_width": 80.0,
+  "cell_depth": 180.0,
+  "corner": 180.0,
+  "edge_spacing": 140.0,
+  "bondpad": {
+    "w": 70.0,
+    "h": 70.0
+  },
+  "default_pitch": 100.0,
+  "core_margin": 45.0,
+  "split_gap": 10.0,
+  "split_filler": "sg13cmos5l_Filler2000",
+  "power_pins": {
+    "vdd": "vdd",
+    "vss": "vss",
+    "iovdd": "iovdd",
+    "iovss": "iovss"
+  },
+  "cells": {
+    "in": {
+      "master": "sg13cmos5l_IOPadIn",
+      "pins": {
+        "pad": "pad",
+        "in": "p2c"
+      }
+    },
+    "out": {
+      "master": "sg13cmos5l_IOPadOut{drive}mA",
+      "drives": [
+        4,
+        16,
+        30
+      ],
+      "default_drive": 30,
+      "pins": {
+        "pad": "pad",
+        "out": "c2p"
+      }
+    },
+    "tri": {
+      "master": "sg13cmos5l_IOPadTriOut{drive}mA",
+      "drives": [
+        4,
+        16,
+        30
+      ],
+      "default_drive": 30,
+      "pins": {
+        "pad": "pad",
+        "out": "c2p",
+        "oe": "c2p_en"
+      }
+    },
+    "inout": {
+      "master": "sg13cmos5l_IOPadInOut{drive}mA",
+      "drives": [
+        4,
+        16,
+        30
+      ],
+      "default_drive": 30,
+      "pins": {
+        "pad": "pad",
+        "in": "p2c",
+        "out": "c2p",
+        "oe": "c2p_en"
+      }
+    },
+    "analog": {
+      "master": "sg13cmos5l_IOPadAnalog",
+      "pins": {
+        "pad": "pad",
+        "analog": "padres"
+      }
+    },
+    "vdd": {
+      "master": "sg13cmos5l_IOPadVdd",
+      "pins": {}
+    },
+    "vss": {
+      "master": "sg13cmos5l_IOPadVss",
+      "pins": {}
+    },
+    "iovdd": {
+      "master": "sg13cmos5l_IOPadIOVdd",
+      "pins": {}
+    },
+    "iovss": {
+      "master": "sg13cmos5l_IOPadIOVss",
+      "pins": {}
+    }
+  }
+}

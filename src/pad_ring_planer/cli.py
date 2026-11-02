@@ -1,13 +1,13 @@
 """Command line entry point. Without a subcommand the GUI starts.
 
     pad-ring-planer [PROJECT]
-    pad-ring-planer export PROJECT [--csv FILE] [--svg FILE]
+    pad-ring-planer export PROJECT [--csv FILE] [--svg FILE] [--librelane DIR]
 """
 
 import argparse
 import sys
 
-from . import APP_NAME, __version__, export_csv, export_svg, load
+from . import APP_NAME, __version__, export_csv, export_librelane, export_svg, load
 
 
 def _export(argv):
@@ -15,15 +15,20 @@ def _export(argv):
     ap.add_argument("project", help="project file (.json)")
     ap.add_argument("--csv", metavar="FILE", help="write the pin list as CSV")
     ap.add_argument("--svg", metavar="FILE", help="write the drawing as SVG")
+    ap.add_argument("--librelane", metavar="DIR",
+                    help="write the LibreLane pad ring files (needs a PDK in the project)")
     args = ap.parse_args(argv)
-    if not (args.csv or args.svg):
-        ap.error("nothing to export, give --csv and/or --svg")
+    if not (args.csv or args.svg or args.librelane):
+        ap.error("nothing to export, give --csv, --svg and/or --librelane")
     try:
         project = load(args.project)
         if args.csv:
             export_csv(project, args.csv)
         if args.svg:
             export_svg(project, args.svg)
+        if args.librelane:
+            for path in export_librelane(project, args.librelane, source=args.project):
+                print(f"wrote {path}")
     except (OSError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

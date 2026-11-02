@@ -1,18 +1,21 @@
-"""Main window: settings, side editors, preview and pin list."""
+"""Main window: side editors, preview, pin list, settings and LibreLane output."""
 
 import os
 from pathlib import Path
 
 from .. import APP_NAME
 from ..formats import pinlist, project_file, svg
-from ..model.constants import ORDER, SIDE_NAMES, SIDES, TYPE_NAMES, TYPES
-from ..model.parse import split_lines
+from ..formats.librelane import export_librelane, librelane_files
+from ..model.constants import FUNCTION_NAMES, FUNCTIONS, ORDER, SIDE_NAMES, SIDES, TYPE_NAMES, TYPES
+from ..model.parse import format_entry, parse_line, split_lines
+from ..model.pdk import get_package, get_pdk, package_names, pdk_names
 from ..model.project import PadSettings, Project, Settings
 from ..style import EXPORT_PALETTE
 from .qt import (QAbstractItemView, QAction, QApplication, QBrush, QCheckBox, QColor, QComboBox,
                  QFileDialog, QFrame, QGraphicsScene, QGridLayout, QGroupBox, QHBoxLayout, QImage,
-                 QKeySequence, QLabel, QMainWindow, QMessageBox, QPainter, QPushButton, QRectF,
-                 QSplitter, Qt, QTableWidget, QTableWidgetItem, QTabWidget, QTimer, QVBoxLayout, QWidget)
+                 QKeySequence, QLabel, QMainWindow, QMessageBox, QPainter, QPlainTextEdit, QPushButton, QRectF,
+                 QSplitter, Qt, QTableWidget, QTableWidgetItem, QTabWidget, QTextCursor, QTimer, QVBoxLayout,
+                 QWidget)
 from .scene import fill_scene, mono_family
 from .widgets import RingView, SideEditor, spin
 
@@ -25,6 +28,9 @@ ALIGN_LABELS = [("center", "Centered"), ("start", "From start corner")]
 # Editors list each side in physical order, as seen on the die
 EDITOR_DIR = {"T": "left → right", "R": "top → bottom", "B": "left → right", "L": "top → bottom"}
 PAD_FIELDS = ("pitch", "w", "h")
+TABLE_COLUMNS = ["Pin", "Side", "Name", "Type", "Function", "Drive", "IO cell", "Domain", "Pkg pin",
+                 "Pad W×H [µm]", "Pitch [µm]", "X [µm]", "Y [µm]"]
+COL = {name: i for i, name in enumerate(TABLE_COLUMNS)}
 
 
 class MainWindow(QMainWindow):
@@ -84,7 +90,10 @@ class MainWindow(QMainWindow):
             "One line per pad, empty line = spacer slot, <code>NC</code> = no connection. "
             "Force type: <code>[p] [g] [a] [rf] [d] [c] [nc]</code>. "
             "Custom size <code>{80x60}</code>, custom pitch <code>@120</code>. "
-            "RF groups: <code>RFIN [gsg]</code>, <code>LO [gsgsg]</code>, <code>[gs]</code>, <code>[sg]</code>.")
+            "RF groups: <code>RFIN [gsg]</code>, <code>LO [gsgsg]</code>, <code>[gs]</code>, <code>[sg]</code>. "
+            "IO function: <code>[in] [out] [tri] [io] [analog] [vdd] [vss] [iovdd] [iovss] [none]</code>, "
+            "drive <code>[16mA]</code>. Power split: a line <code>=== NAME</code> cuts the IO ring and starts "
+            "power domain NAME.")
         hint.setWordWrap(True)
         hint.setStyleSheet(f"color: {pal['muted']};")
         lv.addWidget(hint)
@@ -167,9 +176,8 @@ class MainWindow(QMainWindow):
         bb.addWidget(note)
         bb.addStretch(1)
         pll.addLayout(bb)
-        self.table = QTableWidget(0, 8)
-        self.table.setHorizontalHeaderLabels(["Pin", "Side", "Name", "Type", "Pad W×H [µm]",
-                                              "Pitch [µm]", "X [µm]", "Y [µm]"])
+        self.table = QTableWidget(0, len(TABLE_COLUMNS))
+        self.table.setHorizontalHeaderLabels(TABLE_COLUMNS)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -179,12 +187,17 @@ class MainWindow(QMainWindow):
         pll.addWidget(self.table, 1)
         tabs.addTab(pl, "Pin List")
         tabs.addTab(self._build_settings(), "Settings")
+        self.ll_page = self._build_librelane()
+        tabs.addTab(self.ll_page, "LibreLane")
+        tabs.currentChanged.connect(lambda *_: self.update_librelane())
         self.tabs = tabs
 
         self.cb_mode.currentIndexChanged.connect(self.mode_changed)
         self.cb_align.currentIndexChanged.connect(self.changed)
         self.chk_square.toggled.connect(self.changed)
         self.chk_fixed.toggled.connect(self.fixed_die_toggled)
+        self.cb_pdk.currentIndexChanged.connect(self.pdk_changed)
+        self.cb_pkg.currentIndexChanged.connect(self.changed)
         self.sp_die_w.valueChanged.connect(self.changed)
         self.sp_die_h.valueChanged.connect(self.changed)
         self.sp_cellh.valueChanged.connect(self.changed)
@@ -200,6 +213,27 @@ class MainWindow(QMainWindow):
         sv = QVBoxLayout(page)
         sv.setContentsMargins(10, 10, 10, 10)
         sv.setSpacing(10)
+
+        tech = QGroupBox("Technology")
+        tg = QGridLayout(tech)
+        self.cb_pdk = QComboBox()
+        self.cb_pdk.addItem("None (generic planning, no IO cells)", "")
+        for name in pdk_names():
+            self.cb_pdk.addItem(f"{get_pdk(name).label} ({name})", name)
+        self.cb_pkg = QComboBox()
+        self.cb_pkg.addItem("None", "")
+        for name in package_names():
+            self.cb_pkg.addItem(get_package(name).label, name)
+        tg.addWidget(QLabel("PDK"), 0, 0)
+        tg.addWidget(self.cb_pdk, 0, 1)
+        tg.addWidget(QLabel("Package"), 1, 0)
+        tg.addWidget(self.cb_pkg, 1, 1)
+        self.pdk_note = QLabel()
+        self.pdk_note.setWordWrap(True)
+        self.pdk_note.setStyleSheet(f"color: {pal['muted']};")
+        tg.addWidget(self.pdk_note, 2, 0, 1, 3)
+        tg.setColumnStretch(2, 1)
+        sv.addWidget(tech)
 
         die = QGroupBox("Die")
         dg = QGridLayout(die)
@@ -257,6 +291,27 @@ class MainWindow(QMainWindow):
         sv.addStretch(1)
         return page
 
+    def _build_librelane(self):
+        page = QWidget()
+        lv = QVBoxLayout(page)
+        lv.setContentsMargins(6, 6, 6, 6)
+        bar = QHBoxLayout()
+        self.ll_status = QLabel()
+        self.ll_status.setWordWrap(True)
+        self.ll_status.setStyleSheet(f"color: {self.pal['muted']};")
+        b_copy = QPushButton("Copy File")
+        b_copy.clicked.connect(self.copy_librelane_file)
+        b_exp = QPushButton("Export Files…")
+        b_exp.clicked.connect(self.export_librelane_files)
+        bar.addWidget(self.ll_status, 1)
+        bar.addWidget(b_copy)
+        bar.addWidget(b_exp)
+        lv.addLayout(bar)
+        self.ll_tabs = QTabWidget()
+        self.ll_texts = {}
+        lv.addWidget(self.ll_tabs, 1)
+        return page
+
     def _menus(self):
         mf = self.menuBar().addMenu("&File")
 
@@ -276,6 +331,7 @@ class MainWindow(QMainWindow):
         act(mf, "Export Pin List as CSV…", self.export_csv)
         act(mf, "Export Preview as SVG…", self.export_svg)
         act(mf, "Export Preview as PNG…", self.export_png)
+        act(mf, "Export LibreLane Files…", self.export_librelane_files)
         mf.addSeparator()
         act(mf, "Load Example", self.load_example)
         mf.addSeparator()
@@ -296,6 +352,7 @@ class MainWindow(QMainWindow):
             rf=PadSettings(*(self.sp[("rf", f)].value() for f in PAD_FIELDS)),
             fixed_die=self.chk_fixed.isChecked(),
             die_width=self.sp_die_w.value(), die_height=self.sp_die_h.value(),
+            pdk=self.cb_pdk.currentData() or "", package=self.cb_pkg.currentData() or "",
         )
         project = Project(settings)
         for s in SIDES:
@@ -314,6 +371,9 @@ class MainWindow(QMainWindow):
             self.sp_die_w.setValue(st.die_width)
             self.sp_die_h.setValue(st.die_height)
             self._update_die_widgets()
+            self.cb_pdk.setCurrentIndex(max(0, self.cb_pdk.findData(st.pdk)))
+            self.cb_pkg.setCurrentIndex(max(0, self.cb_pkg.findData(st.package)))
+            self._update_pdk_widgets()
             for key in ("std", "rf"):
                 pads = getattr(st, key)
                 for f in PAD_FIELDS:
@@ -341,6 +401,37 @@ class MainWindow(QMainWindow):
             self._loading = False
         self._update_die_widgets()
         self.changed()
+
+    def pdk_changed(self, *_):
+        pdk = get_pdk(self.cb_pdk.currentData())
+        if pdk and not self._loading:
+            for key in ("std", "rf"):  # the IO cells need at least their width as pitch
+                if self.sp[(key, "pitch")].value() < pdk.cell_width:
+                    self.sp[(key, "pitch")].setValue(pdk.default_pitch)
+        self._update_pdk_widgets()
+        self.changed()
+
+    def _update_pdk_widgets(self):
+        pdk = get_pdk(self.cb_pdk.currentData())
+        for key in ("std", "rf"):
+            for f in ("w", "h"):
+                self.sp[(key, f)].setEnabled(pdk is None)
+        self.sp_cellh.setEnabled(pdk is None)
+        if pdk:  # show the values the layout uses
+            loading, self._loading = self._loading, True
+            self.sp_cellh.setValue(pdk.ring_depth)
+            for key in ("std", "rf"):
+                self.sp[(key, "w")].setValue(pdk.bondpad_w)
+                self.sp[(key, "h")].setValue(pdk.bondpad_h)
+            self._loading = loading
+            self.pdk_note.setText(
+                f"IO ring from {pdk.io_library}: {pdk.edge_spacing:g} µm seal ring spacing + "
+                f"{pdk.cell_depth:g} µm IO cells ({pdk.cell_width:g} µm wide), bondpads "
+                f"{pdk.bondpad_w:g}×{pdk.bondpad_h:g} µm. Pad size and IO cell height come from the PDK, "
+                f"pitches snap to {pdk.site:g} µm. Power splits leave a {pdk.split_gap:g} µm gap.")
+        else:
+            self.pdk_note.setText("Without a PDK the ring is planned abstractly; select one for IO cells "
+                                  "and the LibreLane output.")
 
     def _update_die_widgets(self):
         fixed = self.chk_fixed.isChecked()
@@ -395,19 +486,129 @@ class MainWindow(QMainWindow):
 
         self.table.blockSignals(True)
         self.table.setRowCount(len(lay.pins))
+        pdk = get_pdk(lay.pdk)
         for r, p in enumerate(lay.pins):
-            vals = [str(p.no), SIDE_NAMES[p.side], p.name, TYPE_NAMES[p.type],
-                    f"{p.w:g} × {p.h:g}", f"{p.pitch:g}", f"{p.x:.1f}", f"{p.y:.1f}"]
-            for col, v in enumerate(vals):
+            vals = {"Pin": str(p.no), "Side": SIDE_NAMES[p.side], "Name": p.name, "Type": TYPE_NAMES[p.type],
+                    "Function": FUNCTION_NAMES[p.function], "Drive": f"{p.drive} mA" if p.drive else "",
+                    "IO cell": p.cell, "Domain": p.domain,
+                    "Pkg pin": str(p.package_pin) if p.package_pin else "",
+                    "Pad W×H [µm]": f"{p.w:g} × {p.h:g}", "Pitch [µm]": f"{p.pitch:g}",
+                    "X [µm]": f"{p.x:.1f}", "Y [µm]": f"{p.y:.1f}"}
+            for name, v in vals.items():
+                col = COL[name]
                 it = QTableWidgetItem(v)
-                if col in (0, 5, 6, 7):
+                if name in ("Pin", "Pkg pin", "Pitch [µm]", "X [µm]", "Y [µm]"):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                if col == 3:
+                if name == "Type":
                     it.setForeground(QBrush(QColor(self.pal["types"][p.type][1])))
                 it.setData(Qt.ItemDataRole.UserRole, p.tag)
                 self.table.setItem(r, col, it)
+            for col in (COL["Function"], COL["Drive"]):
+                old = self.table.cellWidget(r, col)
+                if old is not None:
+                    old.hide()  # deleted later by Qt
+                    self.table.removeCellWidget(r, col)
+            if not p.grouped:  # one pad per line: function and drive editable here
+                self.table.setCellWidget(r, COL["Function"], self._function_combo(p))
+                drives = pdk.drives(p.function) if pdk else []
+                if drives:
+                    self.table.setCellWidget(r, COL["Drive"], self._drive_combo(p, pdk, drives))
         self.table.resizeColumnsToContents()
         self.table.blockSignals(False)
+        self.update_librelane()
+
+    def _function_combo(self, p):
+        cb = QComboBox()
+        for f in FUNCTIONS:
+            cb.addItem(FUNCTION_NAMES[f], f)
+        cb.setCurrentIndex(cb.findData(p.function))
+        cb.currentIndexChanged.connect(lambda _i, tag=p.tag, cb=cb: self._set_line_option(tag, function=cb.currentData()))
+        return cb
+
+    def _drive_combo(self, p, pdk, drives):
+        cb = QComboBox()
+        default = pdk.cells[p.function]["default_drive"]
+        cb.addItem(f"Default ({default} mA)", None)
+        for d in drives:
+            cb.addItem(f"{d} mA", d)
+        cb.setCurrentIndex(max(0, cb.findData(p.drive)) if p.drive else 0)
+        cb.currentIndexChanged.connect(lambda _i, tag=p.tag, cb=cb: self._set_line_option(tag, drive=cb.currentData()))
+        return cb
+
+    def _set_line_option(self, tag, **options):
+        """Change the IO function or drive of one editor line (rewrites its tags)."""
+        side, line = self._editor_line(tag)
+        edit = self.editors[side].edit
+        block = edit.document().findBlockByNumber(line)
+        e = parse_line(block.text()) if block.isValid() else None
+        if not e or e["split"]:
+            return
+        e.update(options)
+        cur = QTextCursor(block)
+        cur.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
+        cur.insertText(format_entry(e))
+
+    # ---------- LibreLane ----------
+
+    def update_librelane(self):
+        if self.project is None or self.tabs.currentWidget() is not self.ll_page:
+            return
+        try:
+            files = librelane_files(self.project, self.file.name if self.file else "")
+        except ValueError as e:
+            files = {}
+            self.ll_status.setText(f"No LibreLane output: {e}.")
+        if files:
+            pkg = "" if "bondplan_pinout.yaml" in files else " Select a package for the bondplan PINOUT."
+            self.ll_status.setText("Pad ring for LibreLane (flow: Chip): copy padring_config.yaml into your "
+                                   "config.yaml, keep pad_cfg.tcl next to it and use chip_top.sv as top level." + pkg)
+        if list(files) != list(self.ll_texts):
+            self.ll_tabs.clear()
+            self.ll_texts = {}
+            for name in files:
+                te = QPlainTextEdit()
+                te.setReadOnly(True)
+                te.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+                font = te.font()
+                font.setFamily(mono_family())
+                te.setFont(font)
+                self.ll_tabs.addTab(te, name)
+                self.ll_texts[name] = te
+        for name, text in files.items():
+            te = self.ll_texts[name]
+            if te.toPlainText() != text:
+                v = te.verticalScrollBar().value()
+                te.setPlainText(text)
+                te.verticalScrollBar().setValue(v)
+
+    def copy_librelane_file(self):
+        te = self.ll_tabs.currentWidget()
+        if te is not None:
+            QApplication.clipboard().setText(te.toPlainText())
+            self.statusBar().showMessage(f"{self.ll_tabs.tabText(self.ll_tabs.currentIndex())} copied to clipboard", 4000)
+
+    def export_librelane_files(self):
+        project = self.get_project()
+        try:
+            files = librelane_files(project)
+        except ValueError as e:
+            QMessageBox.warning(self, "LibreLane", f"No LibreLane output: {e}.")
+            return
+        start = str(self.file.parent) if self.file else ""
+        d = QFileDialog.getExistingDirectory(self, "Export LibreLane Files to Folder", start)
+        if not d:
+            return
+        existing = [n for n in files if (Path(d) / n).exists()]
+        if existing and QMessageBox.question(
+                self, "Overwrite Files", "These files exist and will be overwritten:\n" + "\n".join(existing),
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel) != QMessageBox.StandardButton.Ok:
+            return
+        try:
+            paths = export_librelane(project, d, self.file.name if self.file else "")
+        except OSError as e:
+            QMessageBox.critical(self, "Export", f"Export failed:\n{e}")
+            return
+        self.statusBar().showMessage(f"{len(paths)} LibreLane files written to {d}", 6000)
 
     # ---------- Interaction ----------
 
@@ -435,7 +636,13 @@ class MainWindow(QMainWindow):
             return
         side = tag.split(":")[0]
         pads = [p for p in self.layout_data.pins if p.tag == tag]
-        txt = " · ".join(f"Pin {p.no} {p.name} ({TYPE_NAMES[p.type]}, {p.w:g}×{p.h:g} µm)" for p in pads)
+        splits = [sp for sp in self.layout_data.splits if f"{sp.side}:{sp.line}" == tag]
+        if splits:
+            self.statusBar().showMessage(f"{SIDE_NAMES[side]}: power split, domain {splits[0].domain} follows")
+            return
+        txt = " · ".join(f"Pin {p.no} {p.name} ({TYPE_NAMES[p.type]}, {FUNCTION_NAMES[p.function]}"
+                         + (f", {p.cell}" if p.cell else "") + (f", domain {p.domain}" if p.domain else "")
+                         + (f", package pin {p.package_pin}" if p.package_pin else "") + ")" for p in pads)
         self.statusBar().showMessage(f"{SIDE_NAMES[side]}: {txt}")
 
     def table_selected(self):
