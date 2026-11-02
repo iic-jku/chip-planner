@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 from .constants import EXAMPLE, ORDER, REV, SIDES
+from .floorplan import Floorplan
 from .parse import num, split_lines
 
 
@@ -78,6 +79,7 @@ class Project:
     """
     settings: Settings = field(default_factory=Settings)
     sides: Dict[str, List[str]] = field(default_factory=lambda: {s: [] for s in SIDES})
+    floorplan: Floorplan = field(default_factory=Floorplan)
 
     @classmethod
     def example(cls):
@@ -134,6 +136,7 @@ class Project:
             "pdk": st.pdk, "package": st.package,
             "fixed_core": st.fixed_core, "core_w": st.core_width, "core_h": st.core_height, "grid": st.grid,
             "sides": {s: self.side_text(s) for s in SIDES},
+            **({"floorplan": self.floorplan.to_dict()} if self.floorplan.macros else {}),
         }
 
     @classmethod
@@ -157,7 +160,8 @@ class Project:
             grid=num(st["grid"], 10.0, minimum=0.001),
         )
         # Older versions ignored empty lines at the end of a side; drop them to keep the layout
-        return cls(settings, {s: split_lines(str(st["sides"][s] or "")) for s in SIDES})
+        return cls(settings, {s: split_lines(str(st["sides"][s] or "")) for s in SIDES},
+                   Floorplan.from_dict(st["floorplan"]))
 
 
 def default_state():
@@ -180,4 +184,5 @@ def normalize_state(st):
     if "rf" in st:
         out["rf"] = dict(base["rf"], **st["rf"])
     out["sides"] = {s: st.get("sides", {}).get(s, "") for s in SIDES}
+    out["floorplan"] = st.get("floorplan", {})
     return out
