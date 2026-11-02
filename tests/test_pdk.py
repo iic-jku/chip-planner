@@ -152,5 +152,39 @@ class LibreLaneOutput(unittest.TestCase):
         self.assertRegex(text, r'\n  25:\s+"~"')
 
 
+class MacroExport(unittest.TestCase):
+    def project(self):
+        import os
+        from chip_planner.formats.lef import read_lef
+        from chip_planner.model.floorplan import Macro, MacroDef
+        d = ROOT / "tests" / "data" / "macros" / "adc_sar"
+        (m,) = read_lef(d / "final" / "lef" / "adc_sar_top.lef")
+        p = compac_like()
+        p.floorplan.macros = [Macro("adc0", m.name, str(d), 40.0, 20.0, 90, [], m),
+                              Macro("dig", cache=MacroDef("dig", 100.0, 100.0))]
+        return p
+
+    def test_macros_yaml(self):
+        from chip_planner.formats.librelane import macros_yaml
+        from chip_planner.model.floorplan import core_area
+        p = self.project()
+        lay = p.layout()
+        x0, y0, _, _ = core_area(lay)
+        text = macros_yaml(p, lay, out_dir=ROOT / "flow")
+        self.assertIn("MACROS:\n  adc_sar_top:\n", text)
+        self.assertIn("    gds: [dir::../tests/data/macros/adc_sar/final/gds/adc_sar_top.gds]\n", text)
+        self.assertIn("    lef: [dir::../tests/data/macros/adc_sar/final/lef/adc_sar_top.lef]\n", text)
+        self.assertIn(f"      i_chip_core.adc0:\n        location: [{x0 + 40:g}, {lay.die_height - (y0 + 20 + 420):g}]\n"
+                      "        orientation: E\n", text)
+        self.assertIn("# placeholder dig (no LEF) not exported", text)
+
+    def test_macros_yaml_only_with_macros(self):
+        self.assertNotIn("macros.yaml", librelane_files(compac_like()))
+        files = librelane_files(self.project())
+        self.assertIn("macros.yaml", files)
+        self.assertIn("//   adc_sar_top i_chip_core.adc0", files["chip_core_template.sv"])
+        self.assertNotIn("Macros", librelane_files(compac_like())["chip_core_template.sv"])
+
+
 if __name__ == "__main__":
     unittest.main()

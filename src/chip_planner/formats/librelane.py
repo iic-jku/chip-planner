@@ -7,6 +7,7 @@ original script. ``chip_top.sv`` instantiates the IO cells with the same instanc
 the PAD_* lists, so both always match.
 """
 
+import os
 import re
 from collections import Counter, OrderedDict
 from pathlib import Path
@@ -335,7 +336,7 @@ def chip_top_sv(layout, source="", module="chip_top", core_module="chip_core"):
     return "\n".join(out)
 
 
-def chip_core_template_sv(layout, source="", core_module="chip_core"):
+def chip_core_template_sv(layout, source="", core_module="chip_core", macros=()):
     """Port list of the core as instantiated by chip_top.sv, as a starting point."""
     pdk = _require_pdk(layout)
     names = PadNames(layout)
@@ -354,7 +355,60 @@ def chip_core_template_sv(layout, source="", core_module="chip_core"):
     out += [p + "," for p in ports[:-1]] + [ports[-1] + ("," if body else "")]
     out.append("`endif")
     out += [b + ("," if i < len(body) - 1 else "") for i, b in enumerate(body)]
-    out += [");", "", "    // core logic", "", "endmodule", "", "`default_nettype wire", ""]
+    out += [");", "", "    // core logic", ""]
+    placed = [m for m in macros if not m.placeholder]
+    if placed:
+        out += ["    // Macros (place with these instance names, see macros.yaml):"]
+        out += [f"    //   {m.macro} {CORE_INSTANCE}.{m.name}" for m in placed] + [""]
+    out += ["endmodule", "", "`default_nettype wire", ""]
+    return "\n".join(out)
+
+
+# ---------------------------------------------------------------- macro placement
+
+CORE_INSTANCE = "i_chip_core"  # instance name of the core in chip_top.sv
+ORIENTATION = {0: "N", 90: "E", 180: "S", 270: "W"}  # clockwise rotation in the planner
+
+
+def macros_yaml(project, layout, out_dir=None, source=""):
+    """``MACROS`` part of the LibreLane config: LEF/GDS per macro and the placed instances.
+
+    Locations are the lower-left corners of the placed macros in die coordinates (origin
+    lower-left); paths are relative to ``out_dir`` (the directory of the config) when given.
+    """
+    from ..model.floorplan import core_area
+    pdk = _require_pdk(layout)
+    x0, y0, _, _ = core_area(layout)
+
+    def rel(path):
+        if out_dir is None:
+            return Path(path).as_posix()
+        try:
+            return Path(os.path.relpath(Path(path).resolve(), Path(out_dir).resolve())).as_posix()
+        except ValueError:  # other drive
+            return Path(path).as_posix()
+
+    out = _header("#", layout, pdk, source)
+    out += ["# Macro placement for the LibreLane config.yaml (flow: Chip). The macros are",
+            f"# instantiated inside the core ({CORE_INSTANCE} in chip_top.sv).", "", "MACROS:"]
+    groups = {}
+    for m in project.floorplan.macros:
+        if m.placeholder:
+            continue
+        groups.setdefault((m.macro, m.path), []).append(m)
+    for (name, path), ms in groups.items():
+        d = rel(path)
+        out += [f"  {name}:", f"    gds: [dir::{d}/final/gds/{name}.gds]", f"    lef: [dir::{d}/final/lef/{name}.lef]",
+                "    instances:"]
+        for m in ms:
+            w, h = m.size()
+            out += [f"      {CORE_INSTANCE}.{m.name}:",
+                    f"        location: [{x0 + m.x:g}, {layout.die_height - (y0 + m.y + h):g}]",
+                    f"        orientation: {ORIENTATION[m.rot % 360]}"]
+    for m in project.floorplan.macros:
+        if m.placeholder:
+            out.append(f"# placeholder {m.name} (no LEF) not exported")
+    out.append("")
     return "\n".join(out)
 
 
@@ -392,15 +446,17 @@ def bondplan_yaml(layout, source=""):
 
 # ---------------------------------------------------------------- files
 
-def librelane_files(project, source=""):
+def librelane_files(project, source="", out_dir=None):
     """All generated files as ``{filename: text}``; the bondplan only with a package."""
     layout = project.layout()
     files = {
         "padring_config.yaml": config_yaml(layout, source),
         "pad_cfg.tcl": pad_cfg_tcl(layout, source),
         "chip_top.sv": chip_top_sv(layout, source),
-        "chip_core_template.sv": chip_core_template_sv(layout, source),
+        "chip_core_template.sv": chip_core_template_sv(layout, source, macros=project.floorplan.macros),
     }
+    if any(not m.placeholder for m in project.floorplan.macros):
+        files["macros.yaml"] = macros_yaml(project, layout, out_dir, source)
     if layout.package:
         files["bondplan_pinout.yaml"] = bondplan_yaml(layout, source)
     return files
@@ -411,7 +467,7 @@ def export_librelane(project, directory, source=""):
     d = Path(directory)
     d.mkdir(parents=True, exist_ok=True)
     paths = []
-    for name, text in librelane_files(project, source).items():
+    for name, text in librelane_files(project, source, out_dir=d).items():
         path = d / name
         path.write_text(text, encoding="utf-8")
         paths.append(path)
