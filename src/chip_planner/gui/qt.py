@@ -8,10 +8,10 @@ try:
                                    QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem, QGraphicsRectItem,
                                    QGraphicsScene,
                                    QGraphicsSimpleTextItem, QGraphicsView, QGridLayout, QGroupBox,
-                                   QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMainWindow, QMessageBox,
+                                   QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
                                    QPlainTextEdit, QScrollArea, QStackedWidget,
                                    QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
-                                   QTabWidget, QTextEdit, QVBoxLayout, QWidget)
+                                   QTabWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget)
     QT_API = "PySide6"
 except ImportError:  # pragma: no cover
     try:
@@ -22,10 +22,10 @@ except ImportError:  # pragma: no cover
                                      QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem, QGraphicsRectItem,
                                      QGraphicsScene,
                                      QGraphicsSimpleTextItem, QGraphicsView, QGridLayout, QGroupBox,
-                                     QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMainWindow, QMessageBox,
+                                     QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
                                      QPlainTextEdit, QScrollArea, QStackedWidget,
                                      QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
-                                     QTabWidget, QTextEdit, QVBoxLayout, QWidget)
+                                     QTabWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget)
         QT_API = "PyQt6"
     except ImportError:
         raise ImportError("Qt is missing. Install it with:  pip install PySide6") from None

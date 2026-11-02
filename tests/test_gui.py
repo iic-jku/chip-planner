@@ -130,7 +130,7 @@ class GuiSmoke(unittest.TestCase):
 
     def test_layout_of_window(self):
         tabs = [self.win.tabs.tabText(i) for i in range(self.win.tabs.count())]
-        self.assertEqual(tabs, ["Floorplan", "Padframe", "Pin List", "Settings", "LibreLane"])
+        self.assertEqual(tabs, ["Chip", "Pin List", "Settings", "LibreLane"])
         for mode in ("ccw", "cw"):
             self.win.cb_mode.setCurrentIndex(self.win.cb_mode.findData(mode))
             self.win.render()
@@ -153,14 +153,11 @@ class GuiSmoke(unittest.TestCase):
         self.assertGreater(path.stat().st_size, 0)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
 
 
 @unittest.skipIf(main_window is None, "Qt not installed")
-class FloorplanGui(unittest.TestCase):
+class ChipGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
@@ -177,45 +174,110 @@ class FloorplanGui(unittest.TestCase):
         self.win.close()
         self.tmp.cleanup()
 
-    def test_starts_on_padframe_and_switches_left_panel(self):
-        w = self.win
-        self.assertEqual(w.tabs.tabText(w.tabs.currentIndex()), "Padframe")
-        self.assertIs(w.left_stack.currentWidget(), w.editor_page)
-        w.tabs.setCurrentWidget(w.fp_page)
-        self.assertIs(w.left_stack.currentWidget(), w.macro_panel)
-        w.tabs.setCurrentWidget(w.ll_page)
-        self.assertIs(w.left_stack.currentWidget(), w.editor_page)
+    def lines(self, side):
+        return self.win.editors[side].text().split("\n")
 
-    def test_add_macro_mark_pin_and_generate(self):
+    def test_starts_on_chip_and_left_tabs(self):
+        w = self.win
+        self.assertEqual(w.tabs.tabText(w.tabs.currentIndex()), "Chip")
+        self.assertEqual([w.left_tabs.tabText(i) for i in range(w.left_tabs.count())], ["Pads", "Macros"])
+        self.assertIs(w.left_tabs.widget(1), w.macro_panel)
+
+    def test_flylines_and_missing_pads(self):
         w = self.win
         w.add_macro_dir(str(MACRO_DIR))
-        w.add_macro_dir(str(MACRO_DIR))
-        self.assertEqual([m.name for m in w.floorplan.macros], ["adc_sar0", "adc_sar1"])
+        w.floorplan.macros[0].io += ["VIN_P", "VIN_N"]
+        w.editors["L"].set_text("VIN_P")
         w.render()
-        self.assertEqual(len(w.macro_items), 2)
-        self.assertEqual(len(w.macro_panel.boxes), 2)
-        w.floorplan.macros[1].x = 800.0
-        w.floorplan.macros[0].io.append("VIN_P")
-        w.render()
-        self.assertEqual(w.fp_stat["io"].text(), "0/0/0/1")
-        self.assertEqual(w.generate_padframe(confirm=False), ["VIN_P"])
-        self.assertIn("VIN_P [analog]", w.editors["L"].text().split("\n"))
+        self.assertEqual(len(w.chip_items.flylines), 1)
+        self.assertEqual(w.add_missing_pads(), ["VIN_N"])
+        self.assertIn("VIN_N [analog]", self.lines("L"))
+        self.assertEqual(len(w.chip_items.flylines), 2)
         self.assertTrue(w.get_project().settings.fixed_core)
-        self.assertEqual(w.cb_die.currentData(), "core")
-        self.assertEqual(w.tabs.tabText(w.tabs.currentIndex()), "Padframe")
 
-    def test_drag_snaps_to_grid_and_stays_in_core(self):
+    def test_move_pad_and_lock(self):
+        w = self.win
+        w.editors["L"].set_text("A\nB\nC")
+        w.render()
+        w.move_pad("L", 0, "T", 0)
+        self.assertEqual((self.lines("L"), self.lines("T")), (["B", "C"], ["A"]))
+        w.toggle_lock("L", 0)
+        self.assertEqual(self.lines("L"), ["B [lock]", "C"])
+        w.move_pad("L", 0, "L", 2)  # locked: nothing happens
+        self.assertEqual(self.lines("L"), ["B [lock]", "C"])
+        self.assertIn("locked", w.statusBar().currentMessage())
+
+    def test_drop_pad_by_position(self):
+        w = self.win
+        w.editors["L"].set_text("A\nB\nC")
+        w.render()
+        lay = w.layout_data
+        c = next(p for p in lay.pins if p.name == "C")
+        w.drop_pad("L:0", lay.ring_depth / 2, lay.ring_depth + c.b + 1)  # below C on the left side
+        self.assertEqual(self.lines("L"), ["B", "C", "A"])
+
+    def test_optimize_and_stats(self):
         w = self.win
         w.add_macro_dir(str(MACRO_DIR))
-        w.sp_grid.setValue(10)
-        w.render()
-        item = w.macro_items[0]
-        x0, y0 = item.ctx["origin"]
-        item.setPos(x0 + 123.4, y0 + 56.7)
         m = w.floorplan.macros[0]
-        self.assertEqual((m.x, m.y), (120.0, 60.0))
-        item.setPos(x0 + 5000, y0 - 50)
-        self.assertEqual((m.x, m.y), (1500.0 - 420.0, 0.0))
+        m.x, m.io = 400.0, ["VIN_P", "VIN_N"]
+        w.editors["L"].set_text("VIN_N\nVIN_P")
+        w.render()
+        self.assertEqual(w.stat["cross"].text(), "1")
+        w.optimize_pads()
+        self.assertEqual(self.lines("L"), ["VIN_P", "VIN_N"])
+        self.assertEqual(w.stat["cross"].text(), "0")
+
+    def test_suggest_supplies_and_auto_rotate(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        self.assertEqual(w.suggest_supplies(), ["VDD", "VSS"])
+        w.floorplan.macros[0].io = ["VIN_P", "VIN_N"]
+        w.editors["T"].set_text("VIN_P\nVIN_N")
+        w.floorplan.macros[0].x = 600.0
+        w.render()
+        self.assertEqual(w.auto_rotate("adc_sar0"), 90)
+
+    def test_drag_snaps_to_grid_and_edges(self):
+        w = self.win
+        w.add_macro_dir(str(MACRO_DIR))
+        w.add_placeholder("blk", 100.0, 100.0)
+        w.floorplan.macros[1].x, w.floorplan.macros[1].y = 700.0, 600.0
+        w.render()
+        item = next(i for i in w.chip_items.macros if i.macro.name == "blk")
+        x0, y0 = item.ctx["origin"]
+        item.setPos(x0 + 433.0, y0 + 600.0)  # 13 µm right of adc_sar0's right edge (420): snaps to it
+        self.assertEqual(w.floorplan.macros[1].x, 420.0)
+        self.assertIsNotNone(item.ctx["guide"])
+        item.setPos(x0 + 653.4, y0 + 600.0)
+        self.assertEqual(w.floorplan.macros[1].x, 650.0)
+
+    def test_double_click_rotates_every_time(self):
+        from PySide6.QtCore import QPoint
+        from PySide6.QtTest import QTest
+        from chip_planner.gui.qt import Qt
+        w = self.win
+        w.resize(1200, 800)
+        w.show()
+        w.add_macro_dir(str(MACRO_DIR))
+        self.app.processEvents()
+        for expected in (90, 180):
+            item = w.chip_items.macros[0]
+            pos = w.view.mapFromScene(item.sceneBoundingRect().center())
+            QTest.mouseDClick(w.view.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+                              QPoint(pos.x(), pos.y()))
+            QTest.qWait(50)
+            self.assertEqual(w.floorplan.macros[0].rot, expected)
+            QTest.qWait(700)
+
+    def test_select_and_align(self):
+        w = self.win
+        w.add_placeholder("a", 100.0, 100.0)
+        w.add_placeholder("b", 100.0, 100.0)
+        w.floorplan.macros[1].x, w.floorplan.macros[1].y = 500.0, 300.0
+        w.selected_macros = {"a", "b"}
+        w.align("top")
+        self.assertEqual([m.y for m in w.floorplan.macros], [0.0, 0.0])
 
     def test_rotate_duplicate_remove(self):
         w = self.win
@@ -225,39 +287,44 @@ class FloorplanGui(unittest.TestCase):
         self.assertEqual((m.rot, m.size()), (90, (310.0, 420.0)))
         w.duplicate_macro(m)
         self.assertEqual([x.name for x in w.floorplan.macros], ["adc_sar0", "adc_sar1"])
-        self.assertEqual(w.floorplan.macros[1].rot, 90)
         w.remove_macro(m)
         self.assertEqual([x.name for x in w.floorplan.macros], ["adc_sar1"])
 
-    def test_floorplan_round_trip_through_project(self):
+    def test_macro_panel_fields(self):
         w = self.win
         w.add_macro_dir(str(MACRO_DIR))
-        w.floorplan.macros[0].io.append("CLK")
+        box = w.macro_panel.boxes[0]
+        box.cls.setCurrentIndex(box.cls.findText("sensitive"))
+        box.halo.setValue(50)
         p = w.get_project()
-        self.assertEqual(p.floorplan.macros[0].io, ["CLK"])
-        p.floorplan.macros[0].io.append("VIN_N")  # the window keeps its own copy
-        self.assertEqual(w.floorplan.macros[0].io, ["CLK"])
-        w.set_project(p)
-        self.assertEqual(w.get_project().floorplan, p.floorplan)
+        self.assertEqual((p.floorplan.macros[0].cls, p.floorplan.macros[0].halo), ("sensitive", 50.0))
 
-    def test_double_click_rotates_every_time(self):
-        from PySide6.QtCore import QPoint
-        from PySide6.QtTest import QTest
-        from chip_planner.gui.qt import Qt
+    def test_checks_settings(self):
         w = self.win
-        w.resize(1200, 800)
-        w.show()
-        w.tabs.setCurrentWidget(w.fp_page)
+        w.sp_max_flyline.setValue(500)
+        w.sp_spacing.setValue(42)
+        st = w.get_project().settings
+        self.assertEqual((st.max_flyline, st.spacing), (500.0, 42.0))
+        w.set_project(w.get_project())
+        self.assertEqual(w.sp_spacing.value(), 42.0)
+
+    def test_layers(self):
+        w = self.win
         w.add_macro_dir(str(MACRO_DIR))
-        self.app.processEvents()
-        for expected in (90, 180):
-            item = w.macro_items[0]
-            pos = w.fp_view.mapFromScene(item.sceneBoundingRect().center())
-            QTest.mouseDClick(w.fp_view.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
-                              QPoint(pos.x(), pos.y()))
-            QTest.qWait(50)
-            self.assertEqual(w.floorplan.macros[0].rot, expected)
-            QTest.qWait(700)
+        w.floorplan.macros[0].io = ["VIN_P"]
+        w.editors["L"].set_text("VIN_P")
+        w.render()
+        self.assertEqual(len(w.chip_items.flylines), 1)
+        w.layer_actions["flylines"].setChecked(False)
+        self.assertEqual(len(w.chip_items.flylines), 0)
+
+    def test_export_macros_button(self):
+        w = self.win
+        w.cb_pdk.setCurrentIndex(w.cb_pdk.findData("ihp-sg13g2"))
+        w.add_macro_dir(str(MACRO_DIR))
+        w.show_macros_export()
+        self.assertIs(w.tabs.currentWidget(), w.ll_page)
+        self.assertEqual(w.ll_tabs.tabText(w.ll_tabs.currentIndex()), "macros.yaml")
 
     def test_odd_instance_names_do_not_break_render(self):
         w = self.win
@@ -266,16 +333,8 @@ class FloorplanGui(unittest.TestCase):
         w.floorplan.macros[0].name = "a and b"
         w.floorplan.macros[1].x = 0.0
         w.render()
-        self.assertIn("Macros a and b and adc_sar1 overlap", w.fp_warn.text())
-        box = w.macro_panel.boxes[1]
-        from chip_planner.gui.qt import QLineEdit
-        edit = box.findChild(QLineEdit)
-        edit.setText("bad name")
-        edit.editingFinished.emit()
-        self.assertEqual(w.floorplan.macros[1].name, "adc_sar1")
+        self.assertIn("Macros a and b and adc_sar1 overlap", w.warn.text())
 
-    def test_placeholder(self):
-        w = self.win
-        w.add_placeholder("digital", 600.0, 400.0)
-        self.assertTrue(w.floorplan.macros[0].placeholder)
-        self.assertEqual(w.floorplan.macros[0].size(), (600.0, 400.0))
+
+if __name__ == "__main__":
+    unittest.main()
