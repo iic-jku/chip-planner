@@ -65,26 +65,51 @@ See [examples/ihp_sg13g2_domains.json](examples/ihp_sg13g2_domains.json). From t
 chip-planner export examples/ihp_sg13g2_domains.json --librelane flow/padring
 ```
 
-## Floorplan
+## Chip view
 
-The *Floorplan* tab places hard macros in the core before the pad ring exists:
+The *Chip* tab shows the whole chip: the IO ring with the pads, the core area inside it, the
+macros and a flyline from every checked macro pin to the pad with the same name. The left panel has
+two tabs: *Pads* (the side editors) and *Macros* (the macro list).
 
+**Macros**
 - **Add Macro…** takes a LibreLane run directory, e.g. `macros/adc_sar/`. Size and pins come from
-  `final/lef/adc_sar_top.lef` (or the only `*.lef` in `final/lef/`). The project stores only the
-  path; the LEF is read again when the project opens and with *File → Reload Macros* (F5).
-  The same macro can be placed several times (`adc_sar0`, `adc_sar1`, …).
-- **Add Placeholder…** adds a box with name and size for a block that has no LEF yet.
-- Drag a macro to move it (it snaps to the grid, default 10 µm), double-click or *Rotate* turns it
-  by 90°. Overlapping macros and macros outside the core are marked and listed as warnings.
-- Check the pins that go off-chip. Each one gets a flyline to the nearest die edge.
-- **Generate Padframe →** adds a pad line for every checked pin that is not a pad yet, on the side
-  the flyline points to (function from the LEF direction, e.g. `VIN_P [analog]`, `DOUT[0] [out]`).
-  Existing lines are kept. Then add the supply pads in the side editors as usual.
+  `final/lef/adc_sar_top.lef` (or the only `*.lef` in `final/lef/`). The project stores the path;
+  the LEF is read again when the project opens and with *File → Reload Macros* (F5). One macro can be
+  placed several times (`adc_sar0`, `adc_sar1`, …). **Add Placeholder…** adds a box without a LEF.
+- Drag a macro to move it: it snaps to the grid (default 10 µm) and to the edges of other macros
+  (a dashed guide shows it). Double-click or *Rotate* turns it by 90°, *Auto-rotate* picks the
+  rotation with the shortest flylines. Shift-click selects macros for *Align Left* / *Align Top*.
+- Per macro: the pins that go off-chip, the class (`normal`, `sensitive` for analog/RF, `noisy` for
+  digital or clocks), the power domain and the halo.
 
-The core size and the grid are set in *Settings → Die* or in the floorplan toolbar. The floorplan
-uses the die size mode *Fixed core size (minimum)*: the die is at least core + IO ring (+ the core
-margin of the PDK) and grows when the pads need more room. The core is centred in the LibreLane
-`CORE_AREA`.
+**Pads**
+- Drag a pad (or a `=== NAME` split marker) along the ring to move it, also to another side; the
+  side editors follow. Alt-click locks a pad (tag `[lock]`): it can no longer be dragged and
+  *Optimize Pad Order* leaves it in place.
+- *Add Missing Pads* adds a pad for every checked pin without one, where its dashed line points.
+  *Suggest Supply Pads* adds VDD/VSS pads (named after the macro's LEF power pins) next to the
+  macros that have none of their domain within reach.
+- *Optimize Pad Order* sorts the connected pads of each side by the positions of their macro pins,
+  so the flylines no longer cross. Differential pairs (`VIN_P`/`VIN_N`) stay together.
+
+**Checks** (thresholds in *Settings → Checks*)
+- Crossing flylines (orange, counted in the stat tiles) and the longest analog/RF flyline.
+- Differential pairs that are not adjacent; a sensitive pad next to a noisy one (a connected pad
+  takes the class of its macro, others their type).
+- Overlapping macros, macros outside the core, overlapping halos, sensitive and noisy macros closer
+  than the minimum distance.
+- A macro without a VDD and a VSS pad of its domain within the distance (IO supplies don't count).
+
+*Layers* hides the grid, pads, macros, halos, flylines, power domains or pad names; *Measure* shows
+distances. *Edit → Undo/Redo* (Ctrl+Z, Ctrl+Shift+Z) covers all chip view and macro list actions;
+typing in a side editor keeps its own undo while it has the focus.
+
+The die follows the core size in *Fixed core size (minimum)* mode (set when the first macro is
+added): the die is at least core + IO ring (+ the PDK core margin) and grows with the pads.
+
+**LibreLane**: with macros, the LibreLane export also writes `macros.yaml` (`MACROS` with LEF/GDS and
+the instance locations, `i_chip_core.<instance>`), and `chip_core_template.sv` lists the instances
+to create in the core. *Export MACROS…* shows it.
 
 ## Scripting
 
@@ -107,7 +132,8 @@ cp.save(project, "chip.json")
 macro = cp.Macro.from_dir("macros/adc_sar", "adc0")  # reads final/lef/adc_sar_top.lef
 macro.io = ["VIN_P", "VIN_N"]
 project.floorplan.macros.append(macro)
-cp.generate_pads(project)                            # adds VIN_P/VIN_N pads, fixed core mode
+cp.add_missing_pads(project)                         # adds VIN_P/VIN_N pads, fixed core mode
+print(cp.analyse(project).warnings)                  # crossings, pairs, analog and power checks
 ```
 
 `project.sides` holds each side in numbering order; `project.physical_lines(side)` and
