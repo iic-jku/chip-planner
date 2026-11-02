@@ -220,3 +220,60 @@ def utilization(project) -> float:
     st = project.settings.sanitized()
     area = sum(w * h for w, h in (m.size() for m in project.floorplan.macros))
     return area / (st.core_width * st.core_height)
+
+
+def _function(pin: MacroPin) -> Optional[str]:
+    """IO function of a pad for a macro pin, from the LEF USE and DIRECTION."""
+    if pin.use == "ANALOG":
+        return "analog"
+    return {"INPUT": "in", "OUTPUT": "out", "OUTPUT TRISTATE": "tri", "INOUT": "inout"}.get(pin.direction)
+
+
+def io_signals(project) -> List[dict]:
+    """Marked macro pins with the die side they face and their position along it (physical order)."""
+    layout = project.layout()
+    x0, y0 = core_origin(layout, project.settings)
+    pins = [(m, p) for m in project.floorplan.macros for p in m.io_pins()]
+    count = {}
+    for _, p in pins:
+        count[p.name] = count.get(p.name, 0) + 1
+    out = []
+    for m, p in pins:
+        px, py = m.pin_xy(p)
+        x, y = x0 + px, y0 + py
+        side = nearest_side(x, y, layout.die_width, layout.die_height)
+        out.append({"instance": m.name, "pin": p.name,
+                    "name": p.name if count[p.name] == 1 else f"{m.name}_{p.name}",
+                    "side": side, "pos": x if side in "TB" else y, "function": _function(p)})
+    return out
+
+
+def generate_pads(project) -> List[str]:
+    """Add a pad line for every marked macro pin that is not a pad yet; returns the added names.
+
+    Switches the project to the fixed core size mode first, so the sides follow the floorplan.
+    New lines on an empty side are sorted by position; on a side with lines they are appended
+    at the physical end. Existing lines are never changed.
+    """
+    from .parse import parse_line
+
+    project.settings.fixed_core, project.settings.fixed_die = True, False
+    present = set()
+    for lines in project.sides.values():
+        for line in lines:
+            e = parse_line(line)
+            if e and not e.get("split"):
+                present.add(e["name"])
+    added = []
+    signals = sorted(io_signals(project), key=lambda s: s["pos"])
+    for side in ("T", "R", "B", "L"):
+        new = []
+        for s in signals:
+            if s["side"] == side and s["name"] not in present:
+                fn = s["function"]
+                new.append(f"{s['name']} [{'io' if fn == 'inout' else fn}]" if fn else s["name"])
+                present.add(s["name"])
+                added.append(s["name"])
+        if new:
+            project.set_physical_lines(side, project.physical_lines(side) + new)
+    return added

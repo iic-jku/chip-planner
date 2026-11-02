@@ -29,9 +29,10 @@ from .formats.project_file import load, save
 from .formats.svg import export_svg, to_svg
 from .model import (SIDE_NAMES, SIDES, TYPE_NAMES, TYPES, Floorplan, Layout, Macro, PadSettings, Pin,
                     Project, Settings, build_layout)
+from .model.floorplan import generate_pads
 from .model.pdk import get_package, get_pdk, package_names, pdk_names
 
 __all__ = ["APP_NAME", "SIDES", "SIDE_NAMES", "TYPES", "TYPE_NAMES", "Floorplan", "Layout", "Macro", "PadSettings",
            "Pin", "Project", "Settings", "build_layout", "export_csv", "export_librelane", "export_svg",
-           "get_package", "get_pdk", "librelane_files", "load", "package_names", "pdk_names",
+           "generate_pads", "get_package", "get_pdk", "librelane_files", "load", "package_names", "pdk_names",
            "read_lef", "save", "to_svg"]

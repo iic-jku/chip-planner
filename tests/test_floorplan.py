@@ -11,7 +11,8 @@ from tests import ROOT
 import chip_planner as cp
 from chip_planner.formats.lef import parse_lef, pick_macro, read_lef
 from chip_planner.model.floorplan import (Floorplan, Macro, MacroDef, MacroPin, core_origin, find_lef,
-                                          floorplan_warnings, nearest_side, utilization)
+                                          floorplan_warnings, generate_pads, io_signals, nearest_side,
+                                          utilization)
 
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
 FIXTURE = MACRO_DIR / "final" / "lef" / "adc_sar_top.lef"
@@ -197,6 +198,57 @@ class ReloadTests(unittest.TestCase):
         self.assertIs(cp.Macro, Macro)
         self.assertIs(cp.Floorplan, Floorplan)
         self.assertEqual(cp.read_lef(self.lef)[0].name, "adc_sar_top")
+
+
+class GenerateTests(unittest.TestCase):
+    def project(self, *macros):
+        p = cp.Project()
+        p.floorplan.macros = list(macros)
+        return p
+
+    def test_left_side_sorted_top_to_bottom(self):
+        p = self.project(adc(io=["VIN_N", "VIN_P"]))
+        self.assertEqual(generate_pads(p), ["VIN_P", "VIN_N"])
+        self.assertEqual(p.physical_lines("L"), ["VIN_P [analog]", "VIN_N [analog]"])
+        self.assertTrue(p.settings.fixed_core)
+        self.assertFalse(p.settings.fixed_die)
+
+    def test_functions_from_lef(self):
+        p = self.project(adc(io=["VIN_P", "CLK", "DOUT[0]", "EN", "NOGEO"]))
+        sig = {s["name"]: s["function"] for s in io_signals(p)}
+        self.assertEqual(sig, {"VIN_P": "analog", "CLK": "in", "DOUT[0]": "out", "EN": "tri", "NOGEO": "in"})
+        generate_pads(p)
+        lines = [l for s in "TRBL" for l in p.sides[s]]
+        self.assertIn("DOUT[0] [out]", lines)
+        self.assertIn("EN [tri]", lines)
+
+    def test_sides_follow_rotation(self):
+        p = self.project(adc(rot=90, io=["VIN_P"]))  # rotated: the left edge of the macro faces up
+        self.assertEqual(io_signals(p)[0]["side"], "T")
+
+    def test_name_clash_between_instances(self):
+        p = self.project(adc("adc0", io=["CLK"]), adc("adc1", x=800.0, io=["CLK"]))
+        self.assertEqual(sorted(generate_pads(p)), ["adc0_CLK", "adc1_CLK"])
+
+    def test_non_empty_side_appends(self):
+        p = self.project(adc(io=["VIN_N", "VIN_P"]))
+        p.sides["L"] = ["VDD", "", "VSS"]
+        generate_pads(p)
+        self.assertEqual(p.physical_lines("L"), ["VDD", "", "VSS", "VIN_P [analog]", "VIN_N [analog]"])
+
+    def test_generate_is_idempotent(self):
+        p = self.project(adc(io=["VIN_N", "VIN_P"]))
+        generate_pads(p)
+        before = {s: list(v) for s, v in p.sides.items()}
+        self.assertEqual(generate_pads(p), [])
+        self.assertEqual(p.sides, before)
+
+    def test_stale_pin_skipped(self):
+        p = self.project(adc(io=["VIN_P", "GONE"]))
+        self.assertEqual(generate_pads(p), ["VIN_P"])
+
+    def test_api(self):
+        self.assertIs(cp.generate_pads, generate_pads)
 
 
 if __name__ == "__main__":
