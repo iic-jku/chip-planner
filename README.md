@@ -1,4 +1,4 @@
-# chiptile
+# chip-planner
 
 A lightweight tool for planning IC pad ring pinouts: type the pads of each side,
 the die grows with them (pad-limited). RF/GSG pad groups, pin list and exports.
@@ -8,11 +8,11 @@ For analog/mixed-signal and RFIC designers doing early floorplanning.
 
 ```sh
 pip install .                 # or: pip install -e .  for development
-chiptile               # start the GUI
-chiptile chip.json     # open a project
+chip-planner               # start the GUI
+chip-planner chip.json     # open a project
 ```
 
-Without installing: `PYTHONPATH=src python3 -m chiptile`.
+Without installing: `PYTHONPATH=src python3 -m chip_planner`.
 
 ## Entry syntax
 
@@ -62,7 +62,7 @@ In *Settings → Technology* choose a PDK (IHP SG13G2 and SG13CMOS5L, IO library
 See [examples/ihp_sg13g2_domains.json](examples/ihp_sg13g2_domains.json). From the command line:
 
 ```sh
-chiptile export examples/ihp_sg13g2_domains.json --librelane flow/padring
+chip-planner export examples/ihp_sg13g2_domains.json --librelane flow/padring
 ```
 
 ## Scripting
@@ -70,18 +70,18 @@ chiptile export examples/ihp_sg13g2_domains.json --librelane flow/padring
 The package works without Qt:
 
 ```python
-import chiptile as ct
+import chip_planner as cp
 
-project = ct.load("chip.json")
+project = cp.load("chip.json")
 project.sides["L"].append("VDDA [p]")
 project.settings.std.pitch = 90
 layout = project.layout()
 print(layout.die_width, layout.die_height, layout.warnings)
 for pin in layout.pins:
     print(pin.no, pin.name, pin.x, pin.y)
-ct.export_csv(project, "pins.csv")
-ct.export_svg(project, "ring.svg")
-ct.save(project, "chip.json")
+cp.export_csv(project, "pins.csv")
+cp.export_svg(project, "ring.svg")
+cp.save(project, "chip.json")
 ```
 
 `project.sides` holds each side in numbering order; `project.physical_lines(side)` and
@@ -90,7 +90,7 @@ ct.save(project, "chip.json")
 See [examples/script_example.py](examples/script_example.py). Command line export:
 
 ```sh
-chiptile export chip.json --csv pins.csv --svg ring.svg
+chip-planner export chip.json --csv pins.csv --svg ring.svg
 ```
 
 ## Development

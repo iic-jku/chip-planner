@@ -8,9 +8,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))  # not needed once installed
 
-import chiptile as ct
+import chip_planner as cp
 
-project = ct.Project()
+project = cp.Project()
 project.settings.cell_height = 150
 project.sides["L"] = ["VDDIO", "VSSIO", "SCLK", "SDI", "SDO", "CS_N"]
 project.sides["B"] = ["VDDA", "VSSA", "", "IBIAS", "VREF"]
@@ -31,6 +31,6 @@ for pin in project.layout().pins_on("R"):
 
 out = Path("out")
 out.mkdir(exist_ok=True)
-ct.save(project, out / "example.json")
-ct.export_csv(project, out / "example_pins.csv")
-ct.export_svg(project, out / "example.svg")
+cp.save(project, out / "example.json")
+cp.export_csv(project, out / "example_pins.csv")
+cp.export_svg(project, out / "example.svg")

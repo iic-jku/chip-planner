@@ -4,8 +4,8 @@ import unittest
 
 from tests import ROOT
 
-import chiptile as ct
-from chiptile.model import parse_line
+import chip_planner as cp
+from chip_planner.model import parse_line
 
 BASELINE = json.loads((ROOT / "tests" / "data" / "layout_baseline.json").read_text(encoding="utf-8"))
 PIN_FIELDS = ("no", "name", "type", "side", "line", "w", "h", "pitch", "a", "b", "cx", "cy", "grouped")
@@ -13,10 +13,10 @@ PIN_FIELDS = ("no", "name", "type", "side", "line", "w", "h", "pitch", "a", "b",
 
 def project_for(inp):
     if inp == "example":
-        return ct.Project.example()
+        return cp.Project.example()
     if isinstance(inp, str):
-        return ct.load(ROOT / inp)
-    return ct.Project.from_dict(inp)
+        return cp.load(ROOT / inp)
+    return cp.Project.from_dict(inp)
 
 
 class LayoutBaseline(unittest.TestCase):
@@ -45,7 +45,7 @@ class LayoutBaseline(unittest.TestCase):
                                         "Pad deeper than IO cell at pin 5"])
 
     def test_pin_list_coordinates(self):
-        lay = ct.Project.example().layout()
+        lay = cp.Project.example().layout()
         for p in lay.pins:
             self.assertEqual((p.x, p.y), (p.cx, lay.die_height - p.cy))
 
@@ -64,7 +64,7 @@ class Parsing(unittest.TestCase):
 
 class ProjectApi(unittest.TestCase):
     def test_build_from_script(self):
-        p = ct.Project()
+        p = cp.Project()
         p.sides["L"] += ["VDDA", "", "RFIN [gsg]"]
         p.settings.std.pitch = 90
         lay = p.layout()
@@ -74,20 +74,20 @@ class ProjectApi(unittest.TestCase):
 
     def test_dict_round_trip(self):
         data = json.loads((ROOT / "examples" / "padring.json").read_text(encoding="utf-8"))
-        p = ct.Project.from_dict(data)
-        self.assertEqual(ct.Project.from_dict(p.to_dict()), p)
+        p = cp.Project.from_dict(data)
+        self.assertEqual(cp.Project.from_dict(p.to_dict()), p)
         # older versions ignored empty lines at the end of a side
         self.assertEqual(p.side_text("T"), data["sides"]["T"].rstrip("\n"))
 
     def test_trailing_spacer_counts_in_api(self):
-        p = ct.Project()
+        p = cp.Project()
         p.sides["L"] = ["A"]
         n = p.layout().side_length["L"]
         p.sides["L"].append("")
         self.assertEqual(p.layout().side_length["L"], n + p.settings.std.pitch)
 
     def test_physical_order(self):
-        p = ct.Project.example()  # ccw: top and right are numbered against the geometry
+        p = cp.Project.example()  # ccw: top and right are numbered against the geometry
         lay = p.layout()
         for side in "TRBL":
             nos = p.to_physical(side, [x.no for x in lay.pins_on(side)])
@@ -101,7 +101,7 @@ class ProjectApi(unittest.TestCase):
         lines = ["A", "", "B [gsg]", "C"]
         pos = {}
         for mode in ("ccw", "cw"):
-            p = ct.Project()
+            p = cp.Project()
             p.settings.mode = mode
             for side in "TRBL":
                 p.set_physical_lines(side, [f"{side}{x}" if x else x for x in lines])
@@ -109,7 +109,7 @@ class ProjectApi(unittest.TestCase):
         self.assertEqual(pos["ccw"], pos["cw"])
 
     def test_fixed_die(self):
-        p = ct.Project.example()
+        p = cp.Project.example()
         auto = p.layout()
         p.settings.fixed_die = True
         p.settings.die_width, p.settings.die_height = 1500, 1200
@@ -124,7 +124,7 @@ class ProjectApi(unittest.TestCase):
         self.assertAlmostEqual(lay.pins_on("T")[0].cx - auto.pins_on("T")[0].cx, dx)
 
     def test_fixed_die_too_small(self):
-        p = ct.Project.example()
+        p = cp.Project.example()
         p.settings.fixed_die = True
         p.settings.die_width, p.settings.die_height = 700, 100
         lay = p.layout()
@@ -134,21 +134,21 @@ class ProjectApi(unittest.TestCase):
         self.assertIn("Pads do not fit on the top side: 740 µm needed, 460 µm available", lay.warnings)
 
     def test_fixed_die_round_trip(self):
-        p = ct.Project.example()
+        p = cp.Project.example()
         p.settings.fixed_die = True
         p.settings.die_width = 3000
         d = p.to_dict()
         self.assertEqual((d["fixed_die"], d["die_w"], d["die_h"]), (True, 3000, 2000.0))
-        self.assertEqual(ct.Project.from_dict(d), p)
-        self.assertFalse(ct.Project.from_dict({"sides": {}}).settings.fixed_die)
+        self.assertEqual(cp.Project.from_dict(d), p)
+        self.assertFalse(cp.Project.from_dict({"sides": {}}).settings.fixed_die)
 
     def test_legacy_flat_pitch(self):
-        p = ct.Project.from_dict({"pitch": 100, "sides": {"T": "A"}})
+        p = cp.Project.from_dict({"pitch": 100, "sides": {"T": "A"}})
         self.assertEqual(dataclasses.astuple(p.settings.std), (100.0, 75.0, 75.0))
         self.assertEqual(p.sides["R"], [])
 
     def test_invalid_values_fall_back(self):
-        p = ct.Project.from_dict({"mode": "zigzag", "cellh": "abc", "std": {"pitch": -5}, "sides": {}})
+        p = cp.Project.from_dict({"mode": "zigzag", "cellh": "abc", "std": {"pitch": -5}, "sides": {}})
         self.assertEqual((p.settings.mode, p.settings.cell_height, p.settings.std.pitch), ("ccw", 120.0, 80.0))
         p.settings.std.w = 0
         self.assertEqual(p.layout().pins, [])

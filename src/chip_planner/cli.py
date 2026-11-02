@@ -1,7 +1,7 @@
 """Command line entry point. Without a subcommand the GUI starts.
 
-    chiptile [PROJECT]
-    chiptile export PROJECT [--csv FILE] [--svg FILE] [--librelane DIR]
+    chip-planner [PROJECT]
+    chip-planner export PROJECT [--csv FILE] [--svg FILE] [--librelane DIR]
 """
 
 import argparse
@@ -11,7 +11,7 @@ from . import APP_NAME, __version__, export_csv, export_librelane, export_svg, l
 
 
 def _export(argv):
-    ap = argparse.ArgumentParser(prog="chiptile export", description="Export a project without the GUI.")
+    ap = argparse.ArgumentParser(prog="chip-planner export", description="Export a project without the GUI.")
     ap.add_argument("project", help="project file (.json)")
     ap.add_argument("--csv", metavar="FILE", help="write the pin list as CSV")
     ap.add_argument("--svg", metavar="FILE", help="write the drawing as SVG")
@@ -41,8 +41,8 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] == "export":
         return _export(argv[1:])
-    ap = argparse.ArgumentParser(prog="chiptile", description=f"{APP_NAME}: plan IC pad ring pinouts.",
-                                 epilog="Subcommand: 'chiptile export -h' for exports without the GUI.")
+    ap = argparse.ArgumentParser(prog="chip-planner", description=f"{APP_NAME}: plan IC pad ring pinouts.",
+                                 epilog="Subcommand: 'chip-planner export -h' for exports without the GUI.")
     ap.add_argument("project", nargs="?", help="project file (.json) to open")
     ap.add_argument("--version", action="version", version=f"{APP_NAME} {__version__}")
     args = ap.parse_args(argv)

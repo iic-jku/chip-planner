@@ -17,7 +17,7 @@
 - Project files stay compatible: `normalize_state`/`from_dict` read files without the new keys; `tests/data/layout_baseline.json` must not change.
 - UI, code, comments in English; numbers with decimal point; style from `style.py` palettes.
 - Tests: `python3 -m unittest discover -s tests -t .` (stdlib only).
-- Naming everywhere `chiptile`.
+- Naming everywhere `chip-planner`.
 - Generating pads never deletes or reorders existing editor lines.
 
 ## Decisions taken in this plan (refine the spec)
@@ -41,7 +41,7 @@
 ### Task 1: LEF reader
 
 **Files:**
-- Create: `src/chiptile/formats/lef.py`
+- Create: `src/chip_planner/formats/lef.py`
 - Create: `tests/data/macros/adc_sar/final/lef/adc_sar_top.lef` (fixture, see Step 1)
 - Test: `tests/test_floorplan.py` (new, class `LefTests`)
 
@@ -93,8 +93,8 @@ class LefTests(unittest.TestCase):
 ### Task 2: Fixed core size mode (settings, layout, JSON)
 
 **Files:**
-- Modify: `src/chiptile/model/project.py` (Settings, to_dict, from_dict, normalize_state, sanitized)
-- Modify: `src/chiptile/model/layout.py:153-170` (die sizing), `Layout` dataclass
+- Modify: `src/chip_planner/model/project.py` (Settings, to_dict, from_dict, normalize_state, sanitized)
+- Modify: `src/chip_planner/model/layout.py:153-170` (die sizing), `Layout` dataclass
 - Modify: `docs/superpowers/specs/2026-11-02-floorplan-design.md` (replace `die_mode` text with the storage decision above)
 - Test: `tests/test_model.py`
 
@@ -106,7 +106,7 @@ class LefTests(unittest.TestCase):
 
 ```python
 def test_fixed_core_is_minimum(self):
-    p = ct.Project(sides={"L": ["A"]})
+    p = cp.Project(sides={"L": ["A"]})
     p.settings.fixed_core, p.settings.square = True, False
     p.settings.core_width, p.settings.core_height = 1500.0, 1200.0
     lay = p.layout()
@@ -118,19 +118,19 @@ def test_fixed_core_is_minimum(self):
     self.assertFalse(any("do not fit" in w for w in p.layout().warnings))
 
 def test_fixed_core_with_pdk_adds_core_margin(self):
-    p = ct.Project(sides={"L": ["A [in]"]})
+    p = cp.Project(sides={"L": ["A [in]"]})
     p.settings.pdk, p.settings.fixed_core, p.settings.square = "ihp-sg13g2", True, False
     lay = p.layout()
     m = lay.ring_depth + lay.core_margin
     self.assertGreaterEqual(lay.die_width, 1500 + 2 * m)
-    self.assertEqual(lay.die_width % ct.get_pdk("ihp-sg13g2").site, 0)
+    self.assertEqual(lay.die_width % cp.get_pdk("ihp-sg13g2").site, 0)
 
 def test_fixed_die_wins_over_fixed_core(self): ...   # both True → die_width == settings.die_width
 
 def test_new_settings_round_trip_and_old_files(self):
-    p = ct.Project.example(); p.settings.fixed_core = True; p.settings.grid = 5.0
-    self.assertEqual(ct.Project.from_dict(p.to_dict()), p)
-    old = ct.Project.from_dict({"sides": {}})
+    p = cp.Project.example(); p.settings.fixed_core = True; p.settings.grid = 5.0
+    self.assertEqual(cp.Project.from_dict(p.to_dict()), p)
+    old = cp.Project.from_dict({"sides": {}})
     self.assertEqual((old.settings.fixed_core, old.settings.core_width, old.settings.grid), (False, 1500.0, 10.0))
 ```
 
@@ -144,9 +144,9 @@ def test_new_settings_round_trip_and_old_files(self):
 ### Task 3: Floorplan model and geometry
 
 **Files:**
-- Modify: `src/chiptile/model/floorplan.py`
-- Modify: `src/chiptile/model/project.py` (field `floorplan`, JSON key `floorplan`, normalize)
-- Modify: `src/chiptile/model/__init__.py` (export `Floorplan`, `Macro`)
+- Modify: `src/chip_planner/model/floorplan.py`
+- Modify: `src/chip_planner/model/project.py` (field `floorplan`, JSON key `floorplan`, normalize)
+- Modify: `src/chip_planner/model/__init__.py` (export `Floorplan`, `Macro`)
 - Test: `tests/test_floorplan.py` (class `FloorplanTests`)
 
 **Interfaces:**
@@ -173,7 +173,7 @@ def test_new_settings_round_trip_and_old_files(self):
 ### Task 4: LEF lookup, reload, project file paths, scripting API
 
 **Files:**
-- Modify: `src/chiptile/model/floorplan.py`, `src/chiptile/formats/project_file.py`, `src/chiptile/__init__.py`
+- Modify: `src/chip_planner/model/floorplan.py`, `src/chip_planner/formats/project_file.py`, `src/chip_planner/__init__.py`
 - Test: `tests/test_floorplan.py` (class `ReloadTests`), copy the fixture dir per test into a temp dir.
 
 **Interfaces:**
@@ -182,7 +182,7 @@ def test_new_settings_round_trip_and_old_files(self):
   - `Floorplan.reload() -> List[str]`: re-reads every non-placeholder macro (one read per directory, instances share the `MacroDef`), updates `cache`, returns warnings: `"No LEF found for adc0 (macros/adc_sar), using last known values"`, `"Pin X of adc0 no longer in the LEF"` for stale `io` names (kept in `io`).
   - `Macro.from_dir(path: str, name: str) -> Macro` reads the LEF (raises `ValueError` if none).
   - `formats.project_file.load(path)` resolves relative macro paths against `Path(path).parent` and calls `floorplan.reload()`; the warnings are stored on `Project.load_warnings` (not serialized). `save(project, path)` writes macro paths relative to `Path(path).parent` (absolute when `relpath` raises `ValueError`).
-  - `ct.Macro`, `ct.Floorplan`, `ct.read_lef`, `ct.generate_pads` (Task 5) exported in `__init__.py` and `__all__`.
+  - `cp.Macro`, `cp.Floorplan`, `cp.read_lef`, `cp.generate_pads` (Task 5) exported in `__init__.py` and `__all__`.
 
 - [ ] **Step 1: Failing tests** — `find_lef` both lookups and `None`; `from_dir` on the fixture; `test_reload_drops_missing_pin` (edit the copied LEF to remove `VIN_N`, reload → warning, `io` still contains it); missing dir → warning, cache kept; `test_paths_relative_to_project_file` (save into `tmp/a/p.json` and `tmp/b/sub/p.json`, JSON holds relative paths, `load` gives absolute paths that exist).
 - [ ] **Step 2: Run, expect FAIL.**
@@ -195,7 +195,7 @@ def test_new_settings_round_trip_and_old_files(self):
 ### Task 5: Generate padframe
 
 **Files:**
-- Modify: `src/chiptile/model/floorplan.py`
+- Modify: `src/chip_planner/model/floorplan.py`
 - Test: `tests/test_floorplan.py` (class `GenerateTests`)
 
 **Interfaces:**
@@ -215,7 +215,7 @@ def test_new_settings_round_trip_and_old_files(self):
 ### Task 6: GUI settings and tab rename
 
 **Files:**
-- Modify: `src/chiptile/gui/main_window.py` (`_build_settings`, `get_project`, `set_project`, `_update_die_widgets`, `render` stat caption, menu texts "Export Preview…" → "Export Padframe…")
+- Modify: `src/chip_planner/gui/main_window.py` (`_build_settings`, `get_project`, `set_project`, `_update_die_widgets`, `render` stat caption, menu texts "Export Preview…" → "Export Padframe…")
 - Test: `tests/test_gui.py`
 
 **Interfaces:**
@@ -225,7 +225,7 @@ def test_new_settings_round_trip_and_old_files(self):
 - [ ] **Step 1: Failing tests** — `test_layout_of_window` expects `["Padframe", "Pin List", "Settings", "LibreLane"]` (Task 7 adds Floorplan in front); `cb_die` set to `"core"` → `get_project().settings.fixed_core` and `die_width >= core + 2×ring`.
 - [ ] **Step 2: Run, expect FAIL.**
 - [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run all tests; manual check `PYTHONPATH=src python3 -m chiptile`.**
+- [ ] **Step 4: Run all tests; manual check `PYTHONPATH=src python3 -m chip_planner`.**
 - [ ] **Step 5: Commit** `"Add die size mode selector and core size settings"`
 
 ---
@@ -233,9 +233,9 @@ def test_new_settings_round_trip_and_old_files(self):
 ### Task 7: Floorplan tab
 
 **Files:**
-- Create: `src/chiptile/gui/floorplan_view.py` (`FloorplanView(QGraphicsView)`, `MacroItem(QGraphicsRectItem)`)
-- Create: `src/chiptile/gui/macro_panel.py` (`MacroPanel(QWidget)`)
-- Modify: `src/chiptile/gui/main_window.py` (tab, left `QStackedWidget`, toolbar, stats, menu action `Reload Macros`, project state)
+- Create: `src/chip_planner/gui/floorplan_view.py` (`FloorplanView(QGraphicsView)`, `MacroItem(QGraphicsRectItem)`)
+- Create: `src/chip_planner/gui/macro_panel.py` (`MacroPanel(QWidget)`)
+- Modify: `src/chip_planner/gui/main_window.py` (tab, left `QStackedWidget`, toolbar, stats, menu action `Reload Macros`, project state)
 - Modify: `README.md` (section "Floorplan"), `CLAUDE.md` (structure: `formats/lef.py`, `model/floorplan.py`; fixed core mode no longer "planned")
 - Test: `tests/test_gui.py`
 
@@ -252,5 +252,5 @@ def test_new_settings_round_trip_and_old_files(self):
 - [ ] **Step 1: Failing GUI tests** — tab list `["Floorplan", "Padframe", "Pin List", "Settings", "LibreLane"]`; selecting the Floorplan tab shows the macro panel; adding the fixture macro via `win.add_macro_dir(path)` (method used by the dialog) creates `adc_sar0`; checking `VIN_P` and `win.generate_padframe(confirm=False)` puts `VIN_P [analog]` into an editor; moving a `MacroItem` with `setPos` snaps to the grid; project round trip via `get_project`/`set_project` keeps the floorplan.
 - [ ] **Step 2: Run, expect FAIL.**
 - [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run all tests; manual check with `PYTHONPATH=src python3 -m chiptile`: add the fixture macro twice, drag, rotate, mark pins, generate, save, reopen.**
+- [ ] **Step 4: Run all tests; manual check with `PYTHONPATH=src python3 -m chip_planner`: add the fixture macro twice, drag, rotate, mark pins, generate, save, reopen.**
 - [ ] **Step 5: Commit** `"Add Floorplan tab with draggable macros"`

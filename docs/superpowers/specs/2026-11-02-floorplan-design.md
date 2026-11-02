@@ -5,7 +5,7 @@ brainstormed separately later.
 
 ## Intent
 
-Today chiptile starts from the pads: the designer types the pad ring and the die grows around it.
+Today chip-planner starts from the pads: the designer types the pad ring and the die grows around it.
 In practice the designer first has hard macros (ADC, PLL, LNA, digital core, …) and decides where
 they sit on the chip. That placement decides where the signal pads should go. Until now this was
 done by hand.
@@ -50,7 +50,7 @@ a first padframe whose signal pads already sit on the right sides.
 
 ## Decisions by the user
 
-- Macro source: the user selects a macro directory, e.g. `macros/adc_sar/`. chiptile reads
+- Macro source: the user selects a macro directory, e.g. `macros/adc_sar/`. chip-planner reads
   `final/lef/<dirname>_top.lef` inside it (LibreLane run output). Size from `SIZE`, pins from `PIN`
   (direction, use, port geometry).
 - Values are always looked up automatically: the project stores the path, and the LEF is read again
@@ -142,7 +142,7 @@ the same directory are read once and share the values.
 - `model/layout.py`: fixed core size mode.
 - `gui/`: Floorplan tab with a scene (drag, rotate, snap, flylines), left macro panel, settings
   fields. Qt only here.
-- `__init__.py`: scripting API, e.g. `ct.read_lef(path)` and access via `project.floorplan`.
+- `__init__.py`: scripting API, e.g. `cp.read_lef(path)` and access via `project.floorplan`.
 - Tests (stdlib unittest): LEF parsing with a small fixture LEF, rotation/edge geometry, generation
   order, JSON round trip incl. old files, GUI smoke test (offscreen).
 

@@ -8,33 +8,33 @@ from pathlib import Path
 
 from tests import ROOT
 
-import chiptile as ct
-from chiptile.formats import pinlist
+import chip_planner as cp
+from chip_planner.formats import pinlist
 
 
 class Exports(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = Path(self.tmp.name)
-        self.project = ct.Project.example()
+        self.project = cp.Project.example()
 
     def tearDown(self):
         self.tmp.cleanup()
 
     def test_save_load(self):
         path = self.dir / "sub" / "p.json"
-        ct.save(self.project, path)
-        self.assertEqual(ct.load(path), self.project)
+        cp.save(self.project, path)
+        self.assertEqual(cp.load(path), self.project)
 
     def test_load_rejects_other_json(self):
         path = self.dir / "x.json"
         path.write_text("[1, 2]")
         with self.assertRaises(ValueError):
-            ct.load(path)
+            cp.load(path)
 
     def test_csv(self):
         path = self.dir / "pins.csv"
-        ct.export_csv(self.project, path)
+        cp.export_csv(self.project, path)
         with open(path, encoding="utf-8-sig", newline="") as f:
             rows = list(csv.reader(f))
         self.assertEqual(tuple(rows[0]), pinlist.HEADER)
@@ -43,7 +43,7 @@ class Exports(unittest.TestCase):
 
     def test_svg(self):
         path = self.dir / "ring.svg"
-        ct.export_svg(self.project, path)
+        cp.export_svg(self.project, path)
         root = ET.parse(path).getroot()
         ns = {"s": "http://www.w3.org/2000/svg"}
         texts = [t.text for t in root.iterfind(".//s:text", ns)]
@@ -53,7 +53,7 @@ class Exports(unittest.TestCase):
 
 class CommandLine(unittest.TestCase):
     def run_cli(self, *args):
-        return subprocess.run([sys.executable, "-m", "chiptile", *args], capture_output=True, text=True,
+        return subprocess.run([sys.executable, "-m", "chip_planner", *args], capture_output=True, text=True,
                               cwd=ROOT, env={"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"})
 
     def test_export(self):
@@ -74,13 +74,13 @@ class NoQtOutsideGui(unittest.TestCase):
     def test_no_qt_loaded(self):
         code = (
             "import sys, tempfile, os\n"
-            "import chiptile as ct, chiptile.cli as cli\n"
-            "import chiptile.model, chiptile.formats.svg, chiptile.formats.pinlist\n"
+            "import chip_planner as cp, chip_planner.cli as cli\n"
+            "import chip_planner.model, chip_planner.formats.svg, chip_planner.formats.pinlist\n"
             "d = tempfile.mkdtemp()\n"
             "assert cli.main(['export', 'examples/padring.json', '--csv', os.path.join(d, 'a.csv'),"
             " '--svg', os.path.join(d, 'a.svg')]) == 0\n"
             "bad = [m for m in sys.modules if m.split('.')[0] in ('PySide6', 'PyQt6', 'shiboken6')"
-            " or m.startswith('chiptile.gui.')]\n"
+            " or m.startswith('chip_planner.gui.')]\n"
             "assert not bad, bad\n"
         )
         r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT,
@@ -88,7 +88,7 @@ class NoQtOutsideGui(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_no_qt_import_in_source(self):
-        src = ROOT / "src" / "chiptile"
+        src = ROOT / "src" / "chip_planner"
         for path in src.rglob("*.py"):
             if "gui" in path.relative_to(src).parts:
                 continue

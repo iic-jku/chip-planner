@@ -19,7 +19,7 @@ from .qt import (QAbstractItemView, QAction, QApplication, QBrush, QCheckBox, QC
 from .scene import fill_scene, mono_family
 from .widgets import RingView, SideEditor, spin
 
-CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "chiptile"
+CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "chip-planner"
 LAST_STATE = CONFIG_DIR / "last-qt.json"
 
 MODE_LABELS = [("ccw", "Counter-clockwise from top left (package)"),

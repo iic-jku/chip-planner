@@ -1,26 +1,26 @@
-"""chiptile: plan IC pad ring pinouts.
+"""chip-planner: plan IC pad ring pinouts.
 
 Scripting API (no Qt needed)::
 
-    import chiptile as ct
+    import chip_planner as cp
 
-    project = ct.load("chip.json")
+    project = cp.load("chip.json")
     project.sides["L"].append("VDDA [p]")
     project.settings.std.pitch = 90
     layout = project.layout()
     print(layout.die_width, layout.die_height, layout.warnings)
-    ct.export_csv(project, "pins.csv")
-    ct.export_svg(project, "ring.svg")
-    ct.save(project, "chip.json")
+    cp.export_csv(project, "pins.csv")
+    cp.export_svg(project, "ring.svg")
+    cp.save(project, "chip.json")
 
-    project.settings.pdk = "ihp-sg13g2"          # see ct.pdk_names()
-    project.settings.package = "OP_QFN32_A4_FIT"  # see ct.package_names()
-    ct.export_librelane(project, "flow/padring")   # config part, pad_cfg.tcl, chip_top.sv, …
+    project.settings.pdk = "ihp-sg13g2"          # see cp.pdk_names()
+    project.settings.package = "OP_QFN32_A4_FIT"  # see cp.package_names()
+    cp.export_librelane(project, "flow/padring")   # config part, pad_cfg.tcl, chip_top.sv, …
 """
 
 # defined before the imports: submodules import them
 __version__ = "0.1.0"
-APP_NAME = "chiptile"
+APP_NAME = "chip-planner"
 
 from .formats.librelane import export_librelane, librelane_files
 from .formats.pinlist import export_csv
