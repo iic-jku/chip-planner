@@ -9,9 +9,9 @@ from tests import ROOT
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
-    from pad_ring_planer.gui import main_window
-    from pad_ring_planer.gui.qt import QApplication
-    from pad_ring_planer.style import PALETTES
+    from chiptile.gui import main_window
+    from chiptile.gui.qt import QApplication
+    from chiptile.style import PALETTES
 except ImportError:
     main_window = None
 
@@ -33,8 +33,8 @@ class GuiSmoke(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_loads_and_renders(self):
-        import pad_ring_planer as prp
-        expected = prp.load(ROOT / "examples" / "padring.json")
+        import chiptile as ct
+        expected = ct.load(ROOT / "examples" / "padring.json")
         self.assertEqual(self.win.get_project(), expected)
         self.assertEqual(self.win.table.rowCount(), len(expected.layout().pins))
         self.assertEqual(self.win.editors["T"].text(), "\n".join(expected.physical_lines("T")))
@@ -45,8 +45,8 @@ class GuiSmoke(unittest.TestCase):
         self.assertEqual(self.win.editors["T"].edit.labels[:3], ["40", "39", "38"])
         self.assertEqual(self.win.editors["R"].edit.labels[0], "24")
         self.assertEqual(self.win.editors["B"].edit.labels[0], "15")
-        import pad_ring_planer as prp
-        self.win.set_project(prp.Project.example())
+        import chiptile as ct
+        self.win.set_project(ct.Project.example())
         self.assertEqual(self.win.editors["T"].edit.labels, ["31", "30", "29–25", "24"])
 
     def test_mode_switch_keeps_editor_text(self):
@@ -97,7 +97,7 @@ class GuiSmoke(unittest.TestCase):
         w = self.win
         w.cb_pdk.setCurrentIndex(w.cb_pdk.findData("ihp-sg13g2"))
         w.render()
-        from pad_ring_planer.gui.main_window import COL
+        from chiptile.gui.main_window import COL
         row = next(r for r, p in enumerate(w.layout_data.pins) if p.name == "RST_N")
         cb = w.table.cellWidget(row, COL["Function"])
         cb.setCurrentIndex(cb.findData("inout"))

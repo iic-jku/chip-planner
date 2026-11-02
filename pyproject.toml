@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pad-ring-planer"
+name = "chiptile"
 dynamic = ["version"]
 description = "Plan IC pad ring pinouts with live die sizing, RF/GSG pad groups and exports."
 readme = "README.md"
@@ -12,13 +12,13 @@ authors = [{ name = "Maximilian Golser" }]
 dependencies = ["PySide6"]
 
 [project.scripts]
-pad-ring-planer = "pad_ring_planer.cli:main"
+chiptile = "chiptile.cli:main"
 
 [tool.setuptools.dynamic]
-version = { attr = "pad_ring_planer.__version__" }
+version = { attr = "chiptile.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-pad_ring_planer = ["data/*.json", "data/pdks/*.json"]
+chiptile = ["data/*.json", "data/pdks/*.json"]

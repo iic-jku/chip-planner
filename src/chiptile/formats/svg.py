@@ -12,7 +12,7 @@ def _f(v):
     return f"{v:.3f}".rstrip("0").rstrip(".")
 
 
-def to_svg(layout, pal=EXPORT_PALETTE, title="Pad-Ring-Planer"):
+def to_svg(layout, pal=EXPORT_PALETTE, title="chiptile"):
     m = layout.margin
     x0, y0 = -m, -m
     w, h = layout.die_width + 2 * m, layout.die_height + 2 * m
@@ -57,7 +57,7 @@ def to_svg(layout, pal=EXPORT_PALETTE, title="Pad-Ring-Planer"):
     return "\n".join(out)
 
 
-def export_svg(project, path, title="Pad-Ring-Planer"):
+def export_svg(project, path, title="chiptile"):
     """Write the drawing of a :class:`Project` as SVG."""
     with open(path, "w", encoding="utf-8") as f:
         f.write(to_svg(project.layout(), title=title))

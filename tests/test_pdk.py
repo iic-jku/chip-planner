@@ -3,15 +3,15 @@ import unittest
 
 from tests import ROOT  # noqa: F401  (sets the import path)
 
-import pad_ring_planer as prp
-from pad_ring_planer.formats.librelane import (bondplan_yaml, chip_top_sv, config_yaml, librelane_files,
+import chiptile as ct
+from chiptile.formats.librelane import (bondplan_yaml, chip_top_sv, config_yaml, librelane_files,
                                                pad_cfg_tcl)
-from pad_ring_planer.model.parse import format_entry, infer_function, parse_line
+from chiptile.model.parse import format_entry, infer_function, parse_line
 
 
 def compac_like(split=False, package=""):
     """8 pads per side on a 1600 µm IHP die, as in a real tapeout (checked with LibreLane)."""
-    p = prp.Project()
+    p = ct.Project()
     st = p.settings
     st.pdk, st.package = "ihp-sg13g2", package
     st.fixed_die, st.die_width, st.die_height, st.std.pitch = True, 1600, 1600, 115
@@ -44,7 +44,7 @@ class Syntax(unittest.TestCase):
             self.assertEqual(infer_function(name, typ), fn, name)
 
     def test_function_sets_type(self):
-        lay = prp.Project(sides={"L": ["AVDD [vdd]", "VDD_SENSE [analog]", "X [none]"],
+        lay = ct.Project(sides={"L": ["AVDD [vdd]", "VDD_SENSE [analog]", "X [none]"],
                                  "T": [], "R": [], "B": []}).layout()
         self.assertEqual([p.type for p in lay.pins], ["pwr", "ana", "nc"])
 
@@ -109,7 +109,7 @@ class Packaging(unittest.TestCase):
         self.assertIn(25, lay.unbonded_leads)
 
     def test_lcc_pin1_top_centre(self):
-        leads = prp.get_package("JLCC44_A4").leads()
+        leads = ct.get_package("JLCC44_A4").leads()
         self.assertEqual(leads["T"], [40, 41, 42, 43, 44, 1, 2, 3, 4, 5, 6])
         self.assertEqual(leads["L"][0], 7)
 
@@ -117,7 +117,7 @@ class Packaging(unittest.TestCase):
 class LibreLaneOutput(unittest.TestCase):
     def test_needs_pdk(self):
         with self.assertRaises(ValueError):
-            librelane_files(prp.Project.example())
+            librelane_files(ct.Project.example())
 
     def test_names_match_between_files(self):
         lay = compac_like(split=True).layout()

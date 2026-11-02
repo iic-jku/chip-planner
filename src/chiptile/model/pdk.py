@@ -1,4 +1,4 @@
-"""PDK and package profiles (data files in ``pad_ring_planer/data``).
+"""PDK and package profiles (data files in ``chiptile/data``).
 
 A PDK profile describes the IO ring of a LibreLane PDK: IO cells per function, cell and
 corner size, seal ring spacing, bondpad and how a power split is made. A package profile
