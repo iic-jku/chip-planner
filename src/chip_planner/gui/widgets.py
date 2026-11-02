@@ -1,9 +1,9 @@
 """Reusable widgets: side editor with pin number gutter, zoomable ring view."""
 
 from ..model.constants import SIDE_NAMES
-from .qt import (QApplication, QColor, QDoubleSpinBox, QFont, QFrame, QGraphicsView, QHBoxLayout, QLabel,
-                 QPainter, QPlainTextEdit, QRect, QSize, Qt, QTextCursor, QTextEdit, QTextFormat,
-                 QVBoxLayout, QWidget)
+from .qt import (QApplication, QColor, QComboBox, QDoubleSpinBox, QFont, QFrame, QGraphicsView, QHBoxLayout,
+                 QLabel, QPainter, QPlainTextEdit, QRect, QSize, QStyledItemDelegate, Qt, QTextCursor, QTextEdit,
+                 QTextFormat, QVBoxLayout, QWidget)
 from .scene import mono_family
 
 
@@ -228,3 +228,29 @@ def spin(value, maximum=5000.0, step=5.0, decimals=1):
     s.setSuffix(" µm")
     s.setKeyboardTracking(False)
     return s
+
+
+OPTIONS_ROLE = Qt.ItemDataRole.UserRole + 1   # [(label, value), ...] of a combo cell
+VALUE_ROLE = Qt.ItemDataRole.UserRole + 2     # current value of a combo cell
+
+
+class ComboDelegate(QStyledItemDelegate):
+    """Table cell edited with a combo box that exists only while editing (cheap for long tables).
+
+    The item holds its choices in ``OPTIONS_ROLE`` and the value in ``VALUE_ROLE``; a choice is
+    committed at once.
+    """
+
+    def createEditor(self, parent, option, index):
+        cb = QComboBox(parent)
+        for label, value in index.data(OPTIONS_ROLE) or []:
+            cb.addItem(label, value)
+        cb.activated.connect(lambda _i, cb=cb: (self.commitData.emit(cb), self.closeEditor.emit(cb)))
+        return cb
+
+    def setEditorData(self, editor, index):
+        editor.setCurrentIndex(max(0, editor.findData(index.data(VALUE_ROLE))))
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.currentData(), VALUE_ROLE)  # value first: itemChanged reads it
+        model.setData(index, editor.currentText(), Qt.ItemDataRole.DisplayRole)

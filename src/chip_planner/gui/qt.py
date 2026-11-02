@@ -9,7 +9,7 @@ try:
                                    QGraphicsScene,
                                    QGraphicsSimpleTextItem, QGraphicsView, QGridLayout, QGroupBox,
                                    QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
-                                   QPlainTextEdit, QScrollArea, QStackedWidget,
+                                   QPlainTextEdit, QScrollArea, QStackedWidget, QStyledItemDelegate,
                                    QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
                                    QTabWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget)
     QT_API = "PySide6"
@@ -23,7 +23,7 @@ except ImportError:  # pragma: no cover
                                      QGraphicsScene,
                                      QGraphicsSimpleTextItem, QGraphicsView, QGridLayout, QGroupBox,
                                      QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
-                                     QPlainTextEdit, QScrollArea, QStackedWidget,
+                                     QPlainTextEdit, QScrollArea, QStackedWidget, QStyledItemDelegate,
                                      QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
                                      QTabWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget)
         QT_API = "PyQt6"

@@ -36,7 +36,12 @@ class GuiSmoke(unittest.TestCase):
         import chip_planner as cp
         expected = cp.load(ROOT / "examples" / "padring.json")
         self.assertEqual(self.win.get_project(), expected)
+        self.assertEqual(self.win.table.rowCount(), 0)  # filled only when the Pin List is shown
+        self.win.tabs.setCurrentWidget(self.win.table_page)
         self.assertEqual(self.win.table.rowCount(), len(expected.layout().pins))
+        self.win.editors["L"].set_text("A")
+        self.win.render()
+        self.assertEqual(self.win.table.rowCount(), len(self.win.layout_data.pins))
         self.assertEqual(self.win.editors["T"].text(), "\n".join(expected.physical_lines("T")))
 
     def test_editors_show_physical_order(self):
@@ -116,14 +121,23 @@ class GuiSmoke(unittest.TestCase):
         w.cb_pdk.setCurrentIndex(w.cb_pdk.findData("ihp-sg13g2"))
         w.render()
         from chip_planner.gui.main_window import COL
-        row = next(r for r, p in enumerate(w.layout_data.pins) if p.name == "RST_N")
-        cb = w.table.cellWidget(row, COL["Function"])
-        cb.setCurrentIndex(cb.findData("inout"))
+        from PySide6.QtWidgets import QStyleOptionViewItem
+        w.tabs.setCurrentWidget(w.table_page)
+        self.assertIsNone(w.table.cellWidget(0, COL["Function"]))  # editors only while editing
+
+        def edit(name, col, value):
+            row = next(r for r, p in enumerate(w.layout_data.pins) if p.name == name)
+            index = w.table.model().index(row, COL[col])
+            d = w.table.itemDelegateForColumn(COL[col])
+            editor = d.createEditor(w.table.viewport(), QStyleOptionViewItem(), index)
+            d.setEditorData(editor, index)
+            editor.setCurrentIndex(editor.findData(value))
+            d.setModelData(editor, w.table.model(), index)
+
+        edit("RST_N", "Function", "inout")
         self.assertIn("RST_N [io]", w.editors["L"].text())
         w.render()
-        row = next(r for r, p in enumerate(w.layout_data.pins) if p.name == "RST_N")
-        drive = w.table.cellWidget(row, COL["Drive"])
-        drive.setCurrentIndex(drive.findData(16))
+        edit("RST_N", "Drive", 16)
         self.assertIn("RST_N [io] [16mA]", w.editors["L"].text())
         w.render()
         self.assertEqual(next(p.cell for p in w.layout_data.pins if p.name == "RST_N"), "sg13g2_IOPadInOut16mA")
@@ -139,6 +153,7 @@ class GuiSmoke(unittest.TestCase):
 
     def test_select_pad(self):
         self.win.pad_clicked("L:2")
+        self.win.tabs.setCurrentWidget(self.win.table_page)
         self.assertEqual(self.win.table.currentRow(), 2)
 
     def test_mode_switch_keeps_physical_order(self):

@@ -23,7 +23,7 @@ from .qt import (QAbstractItemView, QAction, QActionGroup, QApplication, QBrush,
                  QPalette, QRectF, QSplitter, Qt, QTableWidget, QTableWidgetItem, QTabWidget, QTextCursor, QTimer,
                  QToolButton, QVBoxLayout, QWidget)
 from .scene import fill_scene, make_pen, mono_family
-from .widgets import SideEditor, spin
+from .widgets import OPTIONS_ROLE, VALUE_ROLE, ComboDelegate, SideEditor, spin
 
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "chip-planner"
 LAST_STATE = CONFIG_DIR / "last-qt.json"
@@ -202,7 +202,12 @@ class MainWindow(QMainWindow):
         pll.addLayout(bb)
         self.table = QTableWidget(0, len(TABLE_COLUMNS))
         self.table.setHorizontalHeaderLabels(TABLE_COLUMNS)
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        T = QAbstractItemView.EditTrigger
+        self.table.setEditTriggers(T.DoubleClicked | T.SelectedClicked | T.EditKeyPressed)
+        self.table_delegate = ComboDelegate(self.table)  # function and drive: combo only while editing
+        for name in ("Function", "Drive"):
+            self.table.setItemDelegateForColumn(COL[name], self.table_delegate)
+        self.table.itemChanged.connect(self.table_edited)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.table.verticalHeader().setVisible(False)
@@ -210,10 +215,11 @@ class MainWindow(QMainWindow):
         self.table.itemSelectionChanged.connect(self.table_selected)
         pll.addWidget(self.table, 1)
         tabs.addTab(pl, "Pin List")
+        self.table_page = pl
         tabs.addTab(self._build_settings(), "Settings")
         self.ll_page = self._build_librelane()
         tabs.addTab(self.ll_page, "LibreLane")
-        tabs.currentChanged.connect(lambda *_: self.update_librelane())
+        tabs.currentChanged.connect(self.tab_changed)
         self.tabs = tabs
 
         self.cb_mode.currentIndexChanged.connect(self.mode_changed)
@@ -966,12 +972,32 @@ class MainWindow(QMainWindow):
         self.warn.setVisible(bool(warnings))
         self.macro_panel.update_status(self.floorplan, check, lay.domains)
 
+        if self.tabs.currentWidget() is self.table_page:
+            self.update_table()
+        self.update_librelane()
+
+    def tab_changed(self, *_):
+        if self.tabs.currentWidget() is self.table_page:
+            self.update_table()
+        self.update_librelane()
+
+    def update_table(self):
+        """Fill the pin list; only while it is shown (the slowest part of a redraw)."""
+        lay = self.layout_data
+        if lay is None:
+            return
         self.table.blockSignals(True)
         self.table.setRowCount(len(lay.pins))
         pdk = get_pdk(lay.pdk)
+        editable = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
+        functions = [(FUNCTION_NAMES[f], f) for f in FUNCTIONS]
+        sel_row = None
         for r, p in enumerate(lay.pins):
+            drives = pdk.drives(p.function) if pdk and not p.grouped else []
+            default = f"Default ({pdk.cells[p.function]['default_drive']} mA)" if drives else ""
             vals = {"Pin": str(p.no), "Side": SIDE_NAMES[p.side], "Name": p.name, "Type": TYPE_NAMES[p.type],
-                    "Function": FUNCTION_NAMES[p.function], "Drive": f"{p.drive} mA" if p.drive else "",
+                    "Function": FUNCTION_NAMES[p.function],
+                    "Drive": f"{p.drive} mA" if p.drive else default,
                     "IO cell": p.cell, "Domain": p.domain,
                     "Pkg pin": str(p.package_pin) if p.package_pin else "",
                     "Pad W×H [µm]": f"{p.w:g} × {p.h:g}", "Pitch [µm]": f"{p.pitch:g}",
@@ -979,43 +1005,36 @@ class MainWindow(QMainWindow):
             for name, v in vals.items():
                 col = COL[name]
                 it = QTableWidgetItem(v)
+                it.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
                 if name in ("Pin", "Pkg pin", "Pitch [µm]", "X [µm]", "Y [µm]"):
                     it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 if name == "Type":
                     it.setForeground(QBrush(QColor(self.pal["types"][p.type][1])))
                 it.setData(Qt.ItemDataRole.UserRole, p.tag)
+                # one pad per line: function and drive editable here (double-click)
+                if name == "Function" and not p.grouped:
+                    it.setFlags(editable)
+                    it.setData(OPTIONS_ROLE, functions)
+                    it.setData(VALUE_ROLE, p.function)
+                elif name == "Drive" and drives:
+                    it.setFlags(editable)
+                    it.setData(OPTIONS_ROLE, [(default, None)] + [(f"{d} mA", d) for d in drives])
+                    it.setData(VALUE_ROLE, p.drive)
                 self.table.setItem(r, col, it)
-            for col in (COL["Function"], COL["Drive"]):
-                old = self.table.cellWidget(r, col)
-                if old is not None:
-                    old.hide()  # deleted later by Qt
-                    self.table.removeCellWidget(r, col)
-            if not p.grouped:  # one pad per line: function and drive editable here
-                self.table.setCellWidget(r, COL["Function"], self._function_combo(p))
-                drives = pdk.drives(p.function) if pdk else []
-                if drives:
-                    self.table.setCellWidget(r, COL["Drive"], self._drive_combo(p, pdk, drives))
+            if p.tag == self.selected:
+                sel_row = r
         self.table.resizeColumnsToContents()
+        if sel_row is not None:
+            self.table.selectRow(sel_row)
+            self.table.scrollToItem(self.table.item(sel_row, 0))
         self.table.blockSignals(False)
-        self.update_librelane()
 
-    def _function_combo(self, p):
-        cb = QComboBox()
-        for f in FUNCTIONS:
-            cb.addItem(FUNCTION_NAMES[f], f)
-        cb.setCurrentIndex(cb.findData(p.function))
-        cb.currentIndexChanged.connect(lambda _i, tag=p.tag, cb=cb: self._set_line_option(tag, function=cb.currentData()))
-        return cb
-
-    def _drive_combo(self, p, pdk, drives):
-        cb = QComboBox()
-        default = pdk.cells[p.function]["default_drive"]
-        cb.addItem(f"Default ({default} mA)", None)
-        for d in drives:
-            cb.addItem(f"{d} mA", d)
-        cb.setCurrentIndex(max(0, cb.findData(p.drive)) if p.drive else 0)
-        cb.currentIndexChanged.connect(lambda _i, tag=p.tag, cb=cb: self._set_line_option(tag, drive=cb.currentData()))
-        return cb
+    def table_edited(self, item):
+        col = item.column()
+        if col not in (COL["Function"], COL["Drive"]):
+            return
+        key = "function" if col == COL["Function"] else "drive"
+        self._set_line_option(item.data(Qt.ItemDataRole.UserRole), **{key: item.data(VALUE_ROLE)})
 
     def _set_line_option(self, tag, **options):
         """Change the IO function or drive of one editor line (rewrites its tags)."""

@@ -100,7 +100,8 @@ class Project:
 
     def is_reversed(self, side):
         """True if ``side`` is numbered against its physical order (see :meth:`physical_lines`)."""
-        return REV[self.settings.sanitized().mode][side]
+        mode = self.settings.mode  # not sanitized(): called for every pin of every redraw
+        return REV[mode if mode in ORDER else "ccw"][side]
 
     def to_physical(self, side, items):
         """Reorder a per-line list of ``side`` from numbering order to physical order (and back)."""
