@@ -22,14 +22,16 @@ Scripting API (no Qt needed)::
 __version__ = "0.1.0"
 APP_NAME = "chip-planner"
 
+from .formats.lef import read_lef
 from .formats.librelane import export_librelane, librelane_files
 from .formats.pinlist import export_csv
 from .formats.project_file import load, save
 from .formats.svg import export_svg, to_svg
-from .model import (SIDE_NAMES, SIDES, TYPE_NAMES, TYPES, Layout, PadSettings, Pin, Project,
-                    Settings, build_layout)
+from .model import (SIDE_NAMES, SIDES, TYPE_NAMES, TYPES, Floorplan, Layout, Macro, PadSettings, Pin,
+                    Project, Settings, build_layout)
 from .model.pdk import get_package, get_pdk, package_names, pdk_names
 
-__all__ = ["APP_NAME", "SIDES", "SIDE_NAMES", "TYPES", "TYPE_NAMES", "Layout", "PadSettings", "Pin",
-           "Project", "Settings", "build_layout", "export_csv", "export_librelane", "export_svg",
-           "get_package", "get_pdk", "librelane_files", "load", "package_names", "pdk_names", "save", "to_svg"]
+__all__ = ["APP_NAME", "SIDES", "SIDE_NAMES", "TYPES", "TYPE_NAMES", "Floorplan", "Layout", "Macro", "PadSettings",
+           "Pin", "Project", "Settings", "build_layout", "export_csv", "export_librelane", "export_svg",
+           "get_package", "get_pdk", "librelane_files", "load", "package_names", "pdk_names",
+           "read_lef", "save", "to_svg"]

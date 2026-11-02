@@ -7,6 +7,7 @@ down, like the rest of the model.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 
@@ -55,6 +56,15 @@ class Macro:
     rot: int = 0
     io: List[str] = field(default_factory=list)
     cache: Optional[MacroDef] = None
+
+    @classmethod
+    def from_dir(cls, path: str, name: str) -> "Macro":
+        """New instance of the macro in a LibreLane run directory. Raises ``ValueError``/``OSError``."""
+        lef = find_lef(path)
+        if lef is None:
+            raise ValueError(f"No LEF found in {Path(path) / 'final' / 'lef'}")
+        mdef = _read_macro(lef, path)
+        return cls(name, mdef.name, str(path), cache=mdef)
 
     @property
     def placeholder(self):
@@ -107,6 +117,31 @@ class Macro:
 class Floorplan:
     macros: List[Macro] = field(default_factory=list)
 
+    def reload(self) -> List[str]:
+        """Read the LEF of every macro again (once per directory); returns warnings.
+
+        A macro whose LEF cannot be read keeps its last known values. Marked pins that are no
+        longer in the LEF stay marked but are skipped.
+        """
+        warnings, read = [], {}
+        for m in self.macros:
+            if m.placeholder:
+                continue
+            if m.path not in read:
+                lef = find_lef(m.path)
+                try:
+                    read[m.path] = _read_macro(lef, m.path) if lef else None
+                except (OSError, ValueError):
+                    read[m.path] = None
+            mdef = read[m.path]
+            if mdef is None:
+                warnings.append(f"No LEF found for {m.name} ({m.path}), using last known values")
+                continue
+            m.cache, m.macro = mdef, mdef.name
+            names = {p.name for p in mdef.pins}
+            warnings += [f"Pin {n} of {m.name} no longer in the LEF" for n in m.io if n not in names]
+        return warnings
+
     def instance_name(self, macro: str) -> str:
         """First free instance name ``<macro>0``, ``<macro>1``, …"""
         names = {m.name for m in self.macros}
@@ -127,6 +162,21 @@ class Floorplan:
             except (KeyError, TypeError, AttributeError, ValueError):
                 pass  # not a macro entry
         return cls(macros)
+
+
+def find_lef(path) -> Optional[Path]:
+    """``<path>/final/lef/<dirname>_top.lef``, else the only ``*.lef`` there, else ``None``."""
+    d = Path(path) / "final" / "lef"
+    top = d / f"{Path(path).name}_top.lef"
+    if top.is_file():
+        return top
+    found = sorted(d.glob("*.lef")) if d.is_dir() else []
+    return found[0] if len(found) == 1 else None
+
+
+def _read_macro(lef, path) -> MacroDef:
+    from ..formats.lef import pick_macro, read_lef  # formats imports the model
+    return pick_macro(read_lef(lef), Path(path).name)
 
 
 def core_origin(layout, settings) -> Tuple[float, float]:

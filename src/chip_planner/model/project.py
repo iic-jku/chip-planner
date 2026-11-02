@@ -80,6 +80,7 @@ class Project:
     settings: Settings = field(default_factory=Settings)
     sides: Dict[str, List[str]] = field(default_factory=lambda: {s: [] for s in SIDES})
     floorplan: Floorplan = field(default_factory=Floorplan)
+    load_warnings: List[str] = field(default_factory=list, compare=False, repr=False)  # from reading files
 
     @classmethod
     def example(cls):

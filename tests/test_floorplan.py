@@ -1,13 +1,17 @@
 """Floorplan: LEF reading, macro placement and padframe generation."""
 
+import json
+import shutil
+import tempfile
 import unittest
+from pathlib import Path
 
 from tests import ROOT
 
 import chip_planner as cp
 from chip_planner.formats.lef import parse_lef, pick_macro, read_lef
-from chip_planner.model.floorplan import (Floorplan, Macro, MacroDef, MacroPin, core_origin, floorplan_warnings,
-                                          nearest_side, utilization)
+from chip_planner.model.floorplan import (Floorplan, Macro, MacroDef, MacroPin, core_origin, find_lef,
+                                          floorplan_warnings, nearest_side, utilization)
 
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
 FIXTURE = MACRO_DIR / "final" / "lef" / "adc_sar_top.lef"
@@ -124,6 +128,75 @@ class FloorplanTests(unittest.TestCase):
         self.assertEqual(cp.Project.from_dict({"sides": {}}).floorplan, Floorplan())
         self.assertEqual(cp.Project.from_dict({"sides": {}, "floorplan": {"macros": [{"bad": 1}, 3]}}).floorplan,
                          Floorplan())
+
+
+class ReloadTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp)
+        self.dir = self.tmp / "macros" / "adc_sar"
+        shutil.copytree(MACRO_DIR, self.dir)
+        self.lef = self.dir / "final" / "lef" / "adc_sar_top.lef"
+
+    def test_find_lef(self):
+        self.assertEqual(find_lef(self.dir), self.lef)
+        self.lef.rename(self.lef.with_name("other.lef"))
+        self.assertEqual(find_lef(self.dir), self.lef.with_name("other.lef"))
+        (self.lef.parent / "second.lef").write_text("")
+        self.assertIsNone(find_lef(self.dir))
+        self.assertIsNone(find_lef(self.tmp / "nothing"))
+
+    def test_from_dir(self):
+        m = Macro.from_dir(str(self.dir), "adc_sar0")
+        self.assertEqual((m.name, m.macro, m.size()), ("adc_sar0", "adc_sar_top", (420.0, 310.0)))
+        self.assertEqual(m.path, str(self.dir))
+        with self.assertRaises(ValueError):
+            Macro.from_dir(str(self.tmp), "x")
+
+    def test_reload_drops_missing_pin(self):
+        fp = Floorplan([Macro.from_dir(str(self.dir), "a0"), Macro.from_dir(str(self.dir), "a1")])
+        fp.macros[0].io = ["VIN_P", "VIN_N"]
+        text = self.lef.read_text()
+        self.lef.write_text(text.replace("PIN VIN_N", "PIN VIN_X").replace("END VIN_N", "END VIN_X")
+                            .replace("SIZE 420.000", "SIZE 500.000"))
+        warnings = fp.reload()
+        self.assertEqual(warnings, ["Pin VIN_N of a0 no longer in the LEF"])
+        self.assertEqual(fp.macros[0].io, ["VIN_P", "VIN_N"])
+        self.assertEqual([p.name for p in fp.macros[0].io_pins()], ["VIN_P"])
+        self.assertEqual(fp.macros[1].size(), (500.0, 310.0))
+        self.assertIs(fp.macros[0].cache, fp.macros[1].cache)  # one read per directory
+
+    def test_reload_missing_dir_keeps_cache(self):
+        m = Macro.from_dir(str(self.dir), "a0")
+        shutil.rmtree(self.dir)
+        fp = Floorplan([m, Macro("d", cache=MacroDef("d", 1.0, 1.0))])
+        self.assertEqual(fp.reload(), [f"No LEF found for a0 ({self.dir}), using last known values"])
+        self.assertEqual(m.size(), (420.0, 310.0))
+
+    def test_paths_relative_to_project_file(self):
+        p = cp.Project()
+        p.floorplan.macros = [Macro.from_dir(str(self.dir), "a0")]
+        for target in (self.tmp / "a" / "p.json", self.tmp / "b" / "sub" / "p.json"):
+            cp.save(p, target)
+            stored = json.loads(target.read_text())["floorplan"]["macros"][0]["path"]
+            self.assertFalse(Path(stored).is_absolute())
+            q = cp.load(target)
+            self.assertEqual(Path(q.floorplan.macros[0].path), self.dir)
+            self.assertEqual(q.load_warnings, [])
+        self.assertEqual(p.floorplan.macros[0].path, str(self.dir))  # saving does not change the project
+
+    def test_load_reads_lef_again(self):
+        p = cp.Project()
+        p.floorplan.macros = [Macro.from_dir(str(self.dir), "a0")]
+        target = self.tmp / "p.json"
+        cp.save(p, target)
+        self.lef.write_text(self.lef.read_text().replace("SIZE 420.000", "SIZE 430.000"))
+        self.assertEqual(cp.load(target).floorplan.macros[0].size(), (430.0, 310.0))
+
+    def test_api(self):
+        self.assertIs(cp.Macro, Macro)
+        self.assertIs(cp.Floorplan, Floorplan)
+        self.assertEqual(cp.read_lef(self.lef)[0].name, "adc_sar_top")
 
 
 if __name__ == "__main__":
