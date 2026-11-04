@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/src/prep_ic/gui/assets/prep_ic_logo.svg" alt="PREP-IC logo" width="140">
+  <img src="https://raw.githubusercontent.com/iic-jku/prep-ic/main/src/prep_ic/gui/assets/prep_ic_logo.svg" alt="PREP-IC logo" width="140">
 </p>
 
 # PREP-IC: Pinout, Ring and Early floorplan Planner for ICs
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/iic-jku/chip-planner/blob/main/LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/iic-jku/prep-ic/blob/main/LICENSE)
 ![Python 3.9+](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)
 ![GUI: PySide6-Essentials](https://img.shields.io/badge/GUI-PySide6--Essentials-41CD52.svg?logo=qt&logoColor=white)
 
@@ -13,7 +13,7 @@
 Institute for Integrated Circuits and Quantum Computing (IICQC), Johannes Kepler University (JKU), Linz, Austria
 
 > [!IMPORTANT]
-> PREP-IC (GUI, CLI and Python API) runs anywhere with **Python ≥ 3.9** and **PySide6-Essentials**, see [Install](https://github.com/iic-jku/chip-planner#install) below. The CLI export and the Python API do not load Qt at all.
+> PREP-IC (GUI, CLI and Python API) runs anywhere with **Python ≥ 3.9** and **PySide6-Essentials**, see [Install](https://github.com/iic-jku/prep-ic#install) below. The CLI export and the Python API do not load Qt at all.
 > *Using* the exported files needs a **LibreLane** chip flow and the **IHP Open PDK** (SG13G2 or SG13CMOS5L). The easiest way to get both is the [IIC-OSIC-TOOLS](https://github.com/iic-jku/IIC-OSIC-TOOLS) container.
 
 
@@ -25,25 +25,25 @@ Institute for Integrated Circuits and Quantum Computing (IICQC), Johannes Kepler
 It works in three layers, each optional on top of the one before:
 
 - **Pad ring.** Plain-text side editors with tags for the pad type, IO function, drive strength, bond pad size and pitch, RF ground-signal-ground groups (`[gsg]`, and `[gsgsg]` for a differential pair), spacers, and power splits that cut the IO ring into domains.
-- **PDK and package.** With IHP SG13G2 or SG13CMOS5L chosen, the ring shows the real IO cells, corner cells, bondpads and seal ring spacing, and every pad gets its IO cell. A package from the EUROPRACTICE library gives every pad its package pin. See [Supported PDKs and Packages](https://github.com/iic-jku/chip-planner#supported-pdks-and-packages).
-- **Chip view.** Macros from LibreLane run directories (size and pins from their LEF) are placed in the core, with a flyline from every off-chip macro pin to its pad. Checks flag crossing flylines, split differential pairs, sensitive pads next to noisy ones, macros too close to each other and macros without a supply pad within reach. Pads and macros are dragged in the same picture, and *Optimize Pad Order*, *Add Missing Pads* and *Suggest Supply Pads* do the routine edits. See [Chip view](https://github.com/iic-jku/chip-planner#chip-view).
+- **PDK and package.** With IHP SG13G2 or SG13CMOS5L chosen, the ring shows the real IO cells, corner cells, bondpads and seal ring spacing, and every pad gets its IO cell. A package from the EUROPRACTICE library gives every pad its package pin. See [Supported PDKs and Packages](https://github.com/iic-jku/prep-ic#supported-pdks-and-packages).
+- **Chip view.** Macros from LibreLane run directories (size and pins from their LEF) are placed in the core, with a flyline from every off-chip macro pin to its pad. Checks flag crossing flylines, split differential pairs, sensitive pads next to noisy ones, macros too close to each other and macros without a supply pad within reach. Pads and macros are dragged in the same picture, and *Optimize Pad Order*, *Add Missing Pads* and *Suggest Supply Pads* do the routine edits. See [Chip view](https://github.com/iic-jku/prep-ic#chip-view).
 
 The plan goes straight into the chip flow: the pad ring part of the LibreLane `config.yaml`, a `pad_cfg.tcl` that places the IO cells exactly as planned, a `chip_top.sv` with the IO cell instances, the matching core template, `macros.yaml` and the bondplan `PINOUT`. A pin list (CSV) and the drawing (SVG, PNG) document it.
 
-The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.model`, `prep_ic.formats`) behind a scripting API, and a thin `prep_ic.gui` on PySide6-Essentials. The CLI exports without the GUI. How it is built and the rules it follows are in [`doc/architecture.md`](https://github.com/iic-jku/chip-planner/blob/main/doc/architecture.md).
+The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.model`, `prep_ic.formats`) behind a scripting API, and a thin `prep_ic.gui` on PySide6-Essentials. The CLI exports without the GUI. How it is built and the rules it follows are in [`doc/architecture.md`](https://github.com/iic-jku/prep-ic/blob/main/doc/architecture.md).
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_chip_view.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_chip_view.png" alt="PREP-IC chip view with macros and flylines" width="85%"></a><br>
+  <a href="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/prep_ic_chip_view.png"><img src="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/prep_ic_chip_view.png" alt="PREP-IC chip view with macros and flylines" width="85%"></a><br>
   <em>The chip view of <code>examples/chip_demo.json</code>: an IHP SG13G2 IO ring with the power domains ANA and DIG, four macros with their flylines, one crossing (orange) and one checked pin without a pad.</em>
 </p>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_io_ring.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_io_ring.png" alt="PREP-IC IO ring with two power domains" width="85%"></a><br>
+  <a href="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/prep_ic_io_ring.png"><img src="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/prep_ic_io_ring.png" alt="PREP-IC IO ring with two power domains" width="85%"></a><br>
   <em>The IO ring of <code>examples/ihp_sg13g2_domains.json</code>: 26 IHP SG13G2 IO cells on a fixed 1.6 × 1.6 mm die, split into the power domains MAIN and ANA.</em>
 </p>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_librelane.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_librelane.png" alt="PREP-IC LibreLane output" width="85%"></a><br>
+  <a href="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/prep_ic_librelane.png"><img src="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/prep_ic_librelane.png" alt="PREP-IC LibreLane output" width="85%"></a><br>
   <em>The LibreLane tab: the pad ring part of <code>config.yaml</code>, <code>pad_cfg.tcl</code>, <code>chip_top.sv</code>, the core template and the bondplan pinout, ready to copy or export.</em>
 </p>
 
@@ -51,7 +51,7 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 ## Directory Structure
 
 ```text
-📁 chip-planner/
+📁 prep-ic/
 ├─ 📁 doc/
 │  ├─ 📁 fig/                    README screenshots and logos
 │  └─ architecture.md            layers, conventions and the design rules of the chip view
@@ -113,16 +113,16 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 From GitHub:
 
 ```bash
-pip install git+https://github.com/iic-jku/chip-planner.git
+pip install git+https://github.com/iic-jku/prep-ic.git
 # or, for an isolated install with its own command on PATH:
-pipx install git+https://github.com/iic-jku/chip-planner.git
+pipx install git+https://github.com/iic-jku/prep-ic.git
 ```
 
 From source (for development), an editable install:
 
 ```bash
-git clone https://github.com/iic-jku/chip-planner.git
-cd chip-planner
+git clone https://github.com/iic-jku/prep-ic.git
+cd prep-ic
 
 python -m venv .venv
 # Windows:        .venv\Scripts\activate
@@ -140,7 +140,7 @@ prep-ic              # after installing
 prep-ic chip.json    # the same, opened on that project
 ```
 
-Without a file the GUI opens the project of the last session, or the built-in example on the first start. *File → Load Example* loads that example again, and more projects live in [`examples/`](https://github.com/iic-jku/chip-planner/tree/main/examples).
+Without a file the GUI opens the project of the last session, or the built-in example on the first start. *File → Load Example* loads that example again, and more projects live in [`examples/`](https://github.com/iic-jku/prep-ic/tree/main/examples).
 
 From a source checkout without installing, put `src` on the Python path and start the package as a module:
 
@@ -151,7 +151,7 @@ $env:PYTHONPATH = "src"; python -m prep_ic         # Windows PowerShell
 
 ### Typical workflow
 
-1. **Type the pads** of each side in the *Pads* tab, one line per pad (see [Entry syntax](https://github.com/iic-jku/chip-planner#entry-syntax)). The die grows with them, and the gutter shows each pad's pin number.
+1. **Type the pads** of each side in the *Pads* tab, one line per pad (see [Entry syntax](https://github.com/iic-jku/prep-ic#entry-syntax)). The die grows with them, and the gutter shows each pad's pin number.
 2. **Choose the technology** in *Settings → Technology*: a PDK and optionally a package. The ring then shows the real IO cells, and the *Pin List* shows each pad's IO cell, power domain and package pin.
 3. **Split the power domains** with `=== NAME` lines where the IO ring is cut.
 4. **Add the macros** in the *Macros* tab from their LibreLane run directories, place them in the *Chip* view and check the pins that go off-chip.
@@ -183,7 +183,7 @@ Options combine: `RFOUT [gsg] {70x70} @125`, `DOUT[3] [out] [4mA]`.
 
 In *Settings → Technology* choose a PDK (IHP SG13G2 or SG13CMOS5L) and optionally a package from the EUROPRACTICE library.
 
-- **With a PDK** the preview shows the real ring: the seal ring spacing, the IO cells, the corner cells and the bondpads (sizes in [Supported PDKs and Packages](https://github.com/iic-jku/chip-planner#supported-pdks-and-packages)). Function and drive of each pad are set in the *Pin List* or with tags in the editor. The rows of the *Pin List* also show the IO cell, the power domain and the package pin.
+- **With a PDK** the preview shows the real ring: the seal ring spacing, the IO cells, the corner cells and the bondpads (sizes in [Supported PDKs and Packages](https://github.com/iic-jku/prep-ic#supported-pdks-and-packages)). Function and drive of each pad are set in the *Pin List* or with tags in the editor. The rows of the *Pin List* also show the IO cell, the power domain and the package pin.
 - **Power splits**: an `=== NAME` line leaves a 10 µm gap in the IO ring. Every ring segment gets its own rails (`VDD_NAME`, `VSS_NAME`, `IOVDD_NAME`, `IOVSS_NAME`), and without splits they are `VDD`, `VSS`, `IOVDD` and `IOVSS`. PREP-IC warns when a domain has no supply pad of a kind.
 - **The LibreLane tab and *File → Export LibreLane Files…*** write:
   - `padring_config.yaml`: `DIE_AREA`, `CORE_AREA`, `PAD_CFG` and the `PAD_SOUTH/EAST/NORTH/WEST` lists, to copy into the LibreLane `config.yaml` (flow `Chip`),
@@ -194,7 +194,7 @@ In *Settings → Technology* choose a PDK (IHP SG13G2 or SG13CMOS5L) and optiona
   - `bondplan_pinout.yaml` (with a package): `PACKAGE_NAME` and `PINOUT` for the bondplan config.
 - The design must still provide the bondpad cell (`PAD_BONDPAD_NAME`, e.g. `sg13g2_ip__bondpad_70x70` with `EXTRA_LEFS` and `EXTRA_GDS`), as in any IHP chip.
 
-See [`examples/ihp_sg13g2_domains.json`](https://github.com/iic-jku/chip-planner/blob/main/examples/ihp_sg13g2_domains.json). From the command line:
+See [`examples/ihp_sg13g2_domains.json`](https://github.com/iic-jku/prep-ic/blob/main/examples/ihp_sg13g2_domains.json). From the command line:
 
 ```bash
 prep-ic export examples/ihp_sg13g2_domains.json --librelane flow/padring
@@ -229,7 +229,7 @@ The *Chip* tab shows the whole chip: the IO ring with the pads, the core area in
 
 In the *Fixed core size (minimum)* mode, which is set when the first macro is added, the die follows the core size: it is at least the core plus the IO ring (plus the PDK core margin) and still grows with the pads.
 
-**Demo**: [`examples/chip_demo.json`](https://github.com/iic-jku/chip-planner/blob/main/examples/chip_demo.json) uses the demo macros in [`examples/macros/`](https://github.com/iic-jku/chip-planner/tree/main/examples/macros), abstract LEFs of an ADC, a PLL, an LNA and a digital core in the LibreLane run layout `final/lef/<name>_top.lef`. It starts with one crossing and one missing pad, so try *Optimize Pad Order* and *Add Missing Pads*. *Export MACROS…* shows the `macros.yaml` it exports.
+**Demo**: [`examples/chip_demo.json`](https://github.com/iic-jku/prep-ic/blob/main/examples/chip_demo.json) uses the demo macros in [`examples/macros/`](https://github.com/iic-jku/prep-ic/tree/main/examples/macros), abstract LEFs of an ADC, a PLL, an LNA and a digital core in the LibreLane run layout `final/lef/<name>_top.lef`. It starts with one crossing and one missing pad, so try *Optimize Pad Order* and *Add Missing Pads*. *Export MACROS…* shows the `macros.yaml` it exports.
 
 ### Scripting
 
@@ -262,7 +262,7 @@ prep.export_librelane(project, "flow/padring")         # padring_config.yaml, pa
 
 `project.sides` holds each side in numbering order. `project.physical_lines(side)` and `project.set_physical_lines(side, lines)` use the order as seen on the die, like the GUI.
 
-See [`examples/script_example.py`](https://github.com/iic-jku/chip-planner/blob/main/examples/script_example.py).
+See [`examples/script_example.py`](https://github.com/iic-jku/prep-ic/blob/main/examples/script_example.py).
 
 ### Run the tests
 
@@ -337,7 +337,7 @@ A further PDK is one more JSON file in `src/prep_ic/data/pdks/`, a further packa
   month = oct,
   year = {2026},
   title = {{GitHub Repository of PREP-IC: Pinout, Ring and Early floorplan Planner for ICs}},
-  url = {https://github.com/iic-jku/chip-planner}
+  url = {https://github.com/iic-jku/prep-ic}
 }
 ```
 
@@ -350,12 +350,12 @@ A further PDK is one more JSON file in `src/prep_ic/data/pdks/`, a further packa
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/jku_white.svg">
-    <img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/jku.svg" alt="Johannes Kepler University Linz" height="80">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/jku_white.svg">
+    <img src="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/jku.svg" alt="Johannes Kepler University Linz" height="80">
   </picture>
 </p>
 
 
 ## License
 
-Licensed under the **Apache License 2.0**, see [`LICENSE`](https://github.com/iic-jku/chip-planner/blob/main/LICENSE).
+Licensed under the **Apache License 2.0**, see [`LICENSE`](https://github.com/iic-jku/prep-ic/blob/main/LICENSE).
