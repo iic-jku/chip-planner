@@ -1,4 +1,5 @@
 import csv
+import os
 import subprocess
 import sys
 import tempfile
@@ -10,6 +11,11 @@ from tests import ROOT
 
 import prep_ic as prep
 from prep_ic.formats import pinlist
+
+
+def child_env():
+    # inherit the environment: Windows Python 3.10 and older cannot start without SYSTEMROOT
+    return {**os.environ, "PYTHONPATH": str(ROOT / "src")}
 
 
 class Exports(unittest.TestCase):
@@ -54,7 +60,7 @@ class Exports(unittest.TestCase):
 class CommandLine(unittest.TestCase):
     def run_cli(self, *args):
         return subprocess.run([sys.executable, "-m", "prep_ic", *args], capture_output=True, text=True,
-                              cwd=ROOT, env={"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"})
+                              cwd=ROOT, env=child_env())
 
     def test_export(self):
         with tempfile.TemporaryDirectory() as d:
@@ -84,7 +90,7 @@ class NoQtOutsideGui(unittest.TestCase):
             "assert not bad, bad\n"
         )
         r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT,
-                           env={"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"})
+                           env=child_env())
         self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_no_qt_import_in_source(self):
