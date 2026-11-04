@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,12 +7,38 @@ name = "prep-ic"
 dynamic = ["version"]
 description = "PREP-IC (Pinout, Ring and Early floorplan Planner for ICs): plan IC pad ring pinouts with live die sizing, RF/GSG pad groups and exports."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [
     { name = "Maximilian Golser", email = "maximilian.golser@jku.at" },
     { name = "Simon Dorrer", email = "simon.dorrer@jku.at" },
 ]
+keywords = [
+    "EDA", "IC design", "pad ring", "IO ring", "pinout", "floorplan", "bondplan",
+    "LibreLane", "IHP", "SG13G2", "SG13CMOS5L",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+]
 dependencies = ["PySide6-Essentials>=6.6"]
+
+[project.urls]
+Homepage = "https://github.com/iic-jku/prep-ic"
+Repository = "https://github.com/iic-jku/prep-ic"
+Issues = "https://github.com/iic-jku/prep-ic/issues"
 
 [project.scripts]
 prep-ic = "prep_ic.cli:main"

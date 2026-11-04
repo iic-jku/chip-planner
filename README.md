@@ -5,7 +5,7 @@
 # PREP-IC: Pinout, Ring and Early floorplan Planner for ICs
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/iic-jku/prep-ic/blob/main/LICENSE)
-![Python 3.9+](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?logo=python&logoColor=white)
 ![GUI: PySide6-Essentials](https://img.shields.io/badge/GUI-PySide6--Essentials-41CD52.svg?logo=qt&logoColor=white)
 
 (c) 2026 Maximilian Golser and Simon Dorrer
@@ -13,7 +13,7 @@
 Institute for Integrated Circuits and Quantum Computing (IICQC), Johannes Kepler University (JKU), Linz, Austria
 
 > [!IMPORTANT]
-> PREP-IC (GUI, CLI and Python API) runs anywhere with **Python ≥ 3.9** and **PySide6-Essentials**, see [Install](https://github.com/iic-jku/prep-ic#install) below. The CLI export and the Python API do not load Qt at all.
+> PREP-IC (GUI, CLI and Python API) runs anywhere with **Python ≥ 3.10** and **PySide6-Essentials**, see [Install](https://github.com/iic-jku/prep-ic#install) below. The CLI export and the Python API do not load Qt at all.
 > *Using* the exported files needs a **LibreLane** chip flow and the **IHP Open PDK** (SG13G2 or SG13CMOS5L). The easiest way to get both is the [IIC-OSIC-TOOLS](https://github.com/iic-jku/IIC-OSIC-TOOLS) container.
 
 
