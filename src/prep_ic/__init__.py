@@ -21,7 +21,7 @@ Scripting API (no Qt needed)::
 """
 
 # defined before the imports: submodules import them
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 APP_NAME = "PREP-IC"
 
 from .formats.lef import read_lef
