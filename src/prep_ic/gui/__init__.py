@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Qt GUI. Uses only the public model/formats API; nothing outside this package imports Qt."""
 
 

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-FileCopyrightText: 2025 LibreLane Contributors
+# SPDX-License-Identifier: Apache-2.0
 """LibreLane output: pad ring part of config.yaml, pad_cfg.tcl, chip_top.sv and bondplan PINOUT.
 
 The generated ``pad_cfg.tcl`` replaces LibreLane's ``PAD_CFG`` script: instead of spreading

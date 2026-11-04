@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Chip view: IO ring with pads, the core with draggable macros, flylines and markers."""
 
 import math

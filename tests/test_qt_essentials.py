@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Guard the PySide6-Essentials-only dependency, as snp2le does.
 
 An import from PySide6-Addons (QtCharts, QtWebEngine, ...) still runs where the full PySide6 is installed

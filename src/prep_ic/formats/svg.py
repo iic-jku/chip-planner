@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """SVG drawing of the pad ring, rendered directly from the layout primitives."""
 
 from xml.sax.saxutils import escape, quoteattr

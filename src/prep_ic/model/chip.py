@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Chip view: pads and macros together. Analysis (flylines, crossings, analog and power checks)
 and the edits of the Chip view. Pure Python, no GUI imports.
 

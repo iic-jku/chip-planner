@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Main window: side editors and macro list, chip view, pin list, settings and LibreLane output."""
 
 import copy

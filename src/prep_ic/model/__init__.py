@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Pad ring model. Pure Python, no GUI imports."""
 
 from .constants import ORDER, REV, SIDE_NAMES, SIDES, TYPE_NAMES, TYPES

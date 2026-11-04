@@ -99,9 +99,14 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 │  ├─ test_model.py              entry parser, settings, die and core sizing
 │  ├─ test_pdk.py                PDK profiles, IO cells, LibreLane and bondplan exports
 │  └─ test_qt_essentials.py      guards the PySide6-Essentials-only dependency
+├─ 📁 LICENSES/                  license texts the REUSE check resolves against
+│  └─ Apache-2.0.txt
+├─ CITATION.cff
 ├─ LICENSE                       Apache-2.0
+├─ MANIFEST.in                   sdist manifest (adds the REUSE files)
 ├─ pyproject.toml                packaging, dependency and the prep-ic entry point
 ├─ README.md
+├─ REUSE.toml                    licensing of files that cannot carry an SPDX header
 └─ ToDo.md                       planned work: sky130A and gf180mcuD, release
 ```
 
@@ -334,7 +339,7 @@ A further PDK is one more JSON file in `src/prep_ic/data/pdks/`, a further packa
 ```
 @misc{2026_prep_ic,
   author = {Golser, Maximilian and Dorrer, Simon},
-  month = oct,
+  month = nov,
   year = {2026},
   title = {{GitHub Repository of PREP-IC: Pinout, Ring and Early floorplan Planner for ICs}},
   url = {https://github.com/iic-jku/prep-ic}

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Qt binding: PySide6, PyQt6 as fallback. All GUI modules import Qt from here."""
 
 try:

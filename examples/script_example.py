@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Scripting example: build a pad ring in code, check it and export it.
 
 Run from the repository root:  python3 examples/script_example.py

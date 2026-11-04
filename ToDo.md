@@ -43,6 +43,5 @@ The references are the IO libraries of each PDK (`libs.ref/<io_library>/lef/` an
 
 ## Release
 
-- [ ] SPDX headers (`SPDX-FileCopyrightText: 2026 Maximilian Golser`, `SPDX-License-Identifier: Apache-2.0`) in the source and test files, and a `CITATION.cff` that matches the BibTeX entry of the README.
 - [ ] CI: a GitHub workflow that runs `python -m unittest discover -s tests -t .` (GUI tests offscreen) on Linux, Windows and macOS, for Python 3.9 and the newest Python.
 - [ ] PyPI release and a Zenodo DOI, then the badges, `pip install prep-ic` in *Install* and the DOI in *Cite This Work*.

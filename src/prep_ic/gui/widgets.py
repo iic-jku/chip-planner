@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Reusable widgets: side editor with pin number gutter, zoomable ring view."""
 
 from ..model.constants import SIDE_NAMES
