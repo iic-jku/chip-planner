@@ -351,7 +351,7 @@ A further PDK is one more JSON file in `src/prep_ic/data/pdks/`, a further packa
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/jku_white.svg">
-    <img src="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/jku.svg" alt="Johannes Kepler University Linz" height="80">
+    <img src="https://raw.githubusercontent.com/iic-jku/prep-ic/main/doc/fig/jku.svg" alt="Johannes Kepler University Linz" height="174">
   </picture>
 </p>
 
