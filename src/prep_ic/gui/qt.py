@@ -6,7 +6,7 @@ try:
     from PySide6.QtCore import QEvent, QLocale, QPointF, QRect, QRectF, QSize, Qt, QTimer
     from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QIcon, QImage,
                                QKeySequence, QPainter, QPalette, QPen, QTextCursor, QTextFormat, QTransform)
-    from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
                                    QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem, QGraphicsRectItem,
                                    QGraphicsScene,
                                    QGraphicsSimpleTextItem, QGraphicsView, QGridLayout, QGroupBox,
@@ -20,8 +20,9 @@ except ImportError:  # pragma: no cover
         from PyQt6.QtCore import QEvent, QLocale, QPointF, QRect, QRectF, QSize, Qt, QTimer
         from PyQt6.QtGui import (QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QIcon, QImage,
                                  QKeySequence, QPainter, QPalette, QPen, QTextCursor, QTextFormat, QTransform)
-        from PyQt6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
-                                     QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem, QGraphicsRectItem,
+        from PyQt6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog,
+                                     QDialogButtonBox, QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem,
+                                     QGraphicsRectItem,
                                      QGraphicsScene,
                                      QGraphicsSimpleTextItem, QGraphicsView, QGridLayout, QGroupBox,
                                      QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,

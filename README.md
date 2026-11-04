@@ -73,6 +73,7 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 │  │  └─ svg.py                  SVG drawing of the pad ring
 │  ├─ 📁 gui/                    PySide6-Essentials, uses only the model and formats API
 │  │  ├─ 📁 assets/              the logo
+│  │  ├─ about_dialog.py         Help → About: version, authors, license and links
 │  │  ├─ app.py                  the GUI launcher
 │  │  ├─ chip_view.py            IO ring, core, draggable macros, flylines and markers
 │  │  ├─ macro_panel.py          the macro list

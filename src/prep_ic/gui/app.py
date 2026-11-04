@@ -1,13 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
 # SPDX-License-Identifier: Apache-2.0
 import sys
-from pathlib import Path
 
 from .. import APP_NAME
+from .about_dialog import LOGO
 from .main_window import MainWindow, apply_theme, load_view_settings
 from .qt import QApplication, QIcon, QLocale
-
-LOGO = Path(__file__).parent / "assets" / "prep_ic_logo.svg"
 
 
 def _set_windows_app_id():
