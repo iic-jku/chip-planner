@@ -9,7 +9,7 @@ description = "Plan IC pad ring pinouts with live die sizing, RF/GSG pad groups 
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Maximilian Golser" }]
-dependencies = ["PySide6"]
+dependencies = ["PySide6-Essentials>=6.6"]
 
 [project.scripts]
 chip-planner = "chip_planner.cli:main"
@@ -21,4 +21,4 @@ version = { attr = "chip_planner.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-chip_planner = ["data/*.json", "data/pdks/*.json"]
+chip_planner = ["data/*.json", "data/pdks/*.json", "gui/assets/*.svg"]

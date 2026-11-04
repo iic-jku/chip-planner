@@ -1,4 +1,8 @@
-# chip-planner
+<p align="center">
+  <img src="src/chip_planner/gui/assets/chip_planner_logo.svg" alt="chip-planner logo" width="140">
+</p>
+
+# chip-planner: A PySide6 GUI and Python API for Planning IC Pad Rings, Pinouts and Chip Floorplans
 
 A lightweight tool for planning IC pad ring pinouts: type the pads of each side,
 the die grows with them (pad-limited). RF/GSG pad groups, pin list and exports.

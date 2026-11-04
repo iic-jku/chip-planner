@@ -2,8 +2,8 @@
 
 try:
     from PySide6.QtCore import QEvent, QLocale, QPointF, QRect, QRectF, QSize, Qt, QTimer
-    from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QImage, QKeySequence,
-                               QPainter, QPalette, QPen, QTextCursor, QTextFormat, QTransform)
+    from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QIcon, QImage,
+                               QKeySequence, QPainter, QPalette, QPen, QTextCursor, QTextFormat, QTransform)
     from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
                                    QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem, QGraphicsRectItem,
                                    QGraphicsScene,
@@ -16,8 +16,8 @@ try:
 except ImportError:  # pragma: no cover
     try:
         from PyQt6.QtCore import QEvent, QLocale, QPointF, QRect, QRectF, QSize, Qt, QTimer
-        from PyQt6.QtGui import (QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QImage, QKeySequence,
-                                 QPainter, QPalette, QPen, QTextCursor, QTextFormat, QTransform)
+        from PyQt6.QtGui import (QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QIcon, QImage,
+                                 QKeySequence, QPainter, QPalette, QPen, QTextCursor, QTextFormat, QTransform)
         from PyQt6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
                                      QDoubleSpinBox, QFileDialog, QFrame, QGraphicsItem, QGraphicsRectItem,
                                      QGraphicsScene,
@@ -28,4 +28,4 @@ except ImportError:  # pragma: no cover
                                      QTabWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget)
         QT_API = "PyQt6"
     except ImportError:
-        raise ImportError("Qt is missing. Install it with:  pip install PySide6") from None
+        raise ImportError("Qt is missing. Install it with:  pip install PySide6-Essentials") from None

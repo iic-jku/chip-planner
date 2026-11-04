@@ -167,6 +167,13 @@ class GuiSmoke(unittest.TestCase):
         self.assertTrue(self.win.render_png(path, size=400))
         self.assertGreater(path.stat().st_size, 0)
 
+    def test_logo_icon(self):
+        from chip_planner.gui.app import LOGO
+        from chip_planner.gui.qt import QIcon
+        self.assertTrue(LOGO.is_file())
+        # null without Qt's SVG plugins, which ship in PySide6-Essentials
+        self.assertFalse(QIcon(str(LOGO)).pixmap(32, 32).isNull())
+
 
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
 
