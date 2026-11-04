@@ -115,7 +115,7 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 ├─ pyproject.toml                packaging, dependency and the prep-ic entry point
 ├─ README.md
 ├─ REUSE.toml                    licensing of files that cannot carry an SPDX header
-└─ ToDo.md                       planned work: sky130A and gf180mcuD
+└─ ToDo.md                       open defects, release follow-ups, sky130A and gf180mcuD
 ```
 
 
