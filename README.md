@@ -101,7 +101,8 @@ The code is split into a pure-Python, Qt-free model and exporters (`chip_planner
 │  └─ test_qt_essentials.py      guards the PySide6-Essentials-only dependency
 ├─ LICENSE                       Apache-2.0
 ├─ pyproject.toml                packaging, dependency and the chip-planner entry point
-└─ README.md
+├─ README.md
+└─ ToDo.md                       planned work: sky130A and gf180mcuD, release
 ```
 
 
