@@ -8,7 +8,10 @@ dynamic = ["version"]
 description = "PREP-IC (Pinout, Ring and Early floorplan Planner for ICs): plan IC pad ring pinouts with live die sizing, RF/GSG pad groups and exports."
 readme = "README.md"
 requires-python = ">=3.9"
-authors = [{ name = "Maximilian Golser" }]
+authors = [
+    { name = "Maximilian Golser", email = "maximilian.golser@jku.at" },
+    { name = "Simon Dorrer", email = "simon.dorrer@jku.at" },
+]
 dependencies = ["PySide6-Essentials>=6.6"]
 
 [project.scripts]

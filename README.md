@@ -8,7 +8,7 @@
 ![Python 3.9+](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)
 ![GUI: PySide6-Essentials](https://img.shields.io/badge/GUI-PySide6--Essentials-41CD52.svg?logo=qt&logoColor=white)
 
-(c) 2026 Maximilian Golser
+(c) 2026 Maximilian Golser and Simon Dorrer
 
 Institute for Integrated Circuits and Quantum Computing (IICQC), Johannes Kepler University (JKU), Linz, Austria
 
@@ -333,7 +333,7 @@ A further PDK is one more JSON file in `src/prep_ic/data/pdks/`, a further packa
 
 ```
 @misc{2026_prep_ic,
-  author = {Golser, Maximilian},
+  author = {Golser, Maximilian and Dorrer, Simon},
   month = oct,
   year = {2026},
   title = {{GitHub Repository of PREP-IC: Pinout, Ring and Early floorplan Planner for ICs}},
