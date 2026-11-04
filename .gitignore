@@ -24,5 +24,7 @@ CLAUDE.md
 # Output of examples/script_example.py
 out/
 
-# Brainstorming mockups
+# Brainstorming mockups, specs and plans of AI sessions (the design is in doc/architecture.md)
 .superpowers/
+docs/superpowers/
+doc/superpowers/
