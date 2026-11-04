@@ -33,7 +33,8 @@ classifiers = [
     "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
 ]
-# The Linux wheels of PySide6 6.12.0 drop a reference to None per call, which aborts Python 3.10 and 3.11 (PYSIDE-3474).
+# The PySide6 6.12.0 Linux wheels drop references to None, for example in QFont.setPixelSize, which aborts Python 3.10 and 3.11.
+# PYSIDE-3474 reports the same class of bug and is fixed for 6.12.1. Lift the bound once a fixed release passes the Tests workflow.
 dependencies = [
     "PySide6-Essentials>=6.6,<6.12; sys_platform == 'linux' and python_version < '3.12'",
     "PySide6-Essentials>=6.6; sys_platform != 'linux' or python_version >= '3.12'",

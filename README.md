@@ -149,7 +149,7 @@ python -m venv .venv
 pip install -e .
 ```
 
-The only dependency is PySide6-Essentials, which pip installs with it. On Linux with Python 3.10 or 3.11 it stays below 6.12, since the 6.12.0 Linux wheels crash these Python versions ([PYSIDE-3474](https://bugreports.qt.io/browse/PYSIDE-3474)).
+The only dependency is PySide6-Essentials, which pip installs with it. On Linux with Python 3.10 or 3.11 it stays below 6.12, since a reference count bug in the 6.12.0 Linux wheels crashes these Python versions (see [PYSIDE-3474](https://qt-project.atlassian.net/browse/PYSIDE-3474), fixed for 6.12.1).
 
 ### Run the GUI
 
