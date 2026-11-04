@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Macro list of the Floorplan tab: one box per instance with its pins."""
 
 from ..model.floorplan import MACRO_CLASSES

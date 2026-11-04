@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Minimal LEF reader: macro size and pins (LibreLane ``final/lef`` output). Stdlib only."""
 
 from __future__ import annotations

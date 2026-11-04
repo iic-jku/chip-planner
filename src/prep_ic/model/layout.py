@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Layout computation: pin numbering, die size, geometry and drawing primitives.
 
 All geometry is in µm, y points down, origin at the top-left of the die.

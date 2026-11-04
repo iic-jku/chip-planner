@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Colour palettes and primitive styles, shared by the Qt view and the SVG export. No GUI imports."""
 
 MONO_FONTS = ("IBM Plex Mono", "JetBrains Mono", "DejaVu Sans Mono", "Cascadia Mono",

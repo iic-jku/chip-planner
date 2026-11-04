@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Main window: side editors and macro list, chip view, pin list, settings and LibreLane output."""
 
 import copy
@@ -15,6 +17,7 @@ from ..model.parse import format_entry, parse_line, split_lines
 from ..model.pdk import get_package, get_pdk, package_names, pdk_names
 from ..model.project import PadSettings, Project, Settings, text_to_lines
 from ..style import EXPORT_PALETTE, PALETTES
+from .about_dialog import AboutDialog
 from .chip_view import LAYERS, ChipItems, ChipView, domain_colors, fill_chip
 from .macro_panel import MacroPanel
 from .qt import (QAbstractItemView, QAction, QActionGroup, QApplication, QBrush, QCheckBox, QColor, QComboBox, QEvent,
@@ -525,6 +528,12 @@ class MainWindow(QMainWindow):
             a.setChecked(key == self.theme)
             group.addAction(a)
             self.theme_actions[key] = a
+
+        self.help_menu = self.menuBar().addMenu("&Help")
+        self.act_about = act(self.help_menu, f"About {APP_NAME}", self.show_about)
+
+    def show_about(self):
+        AboutDialog(self).exec()
 
     # ---------- State ----------
 

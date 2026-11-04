@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """GUI smoke test, runs offscreen. Skipped without Qt."""
 
 import os
@@ -173,6 +175,29 @@ class GuiSmoke(unittest.TestCase):
         self.assertTrue(LOGO.is_file())
         # null without Qt's SVG plugins, which ship in PySide6-Essentials
         self.assertFalse(QIcon(str(LOGO)).pixmap(32, 32).isNull())
+
+    def test_about_dialog(self):
+        from unittest import mock
+        from prep_ic import __version__
+        from prep_ic.gui.about_dialog import AboutDialog
+        shown = []
+
+        class Probe(AboutDialog):
+            def exec(self):  # modal exec would block the test
+                shown.append(self)
+                return 0
+
+        about = self.win.act_about
+        self.assertIn(about, self.win.help_menu.actions())
+        self.assertEqual((self.win.help_menu.title(), about.text()), ("&Help", "About PREP-IC"))
+        with mock.patch.object(main_window, "AboutDialog", Probe):
+            about.trigger()
+        dlg, = shown
+        self.assertIs(dlg.parent(), self.win)
+        self.assertIn(f"PREP-IC {__version__}", dlg.text.text())
+        self.assertIn("Maximilian Golser and Simon Dorrer", dlg.text.text())
+        self.assertFalse(dlg.logo.pixmap().isNull())
+        dlg.close()
 
 
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"

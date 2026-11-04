@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Draws layout primitives into a QGraphicsScene."""
 
 from ..style import MONO_FONTS, shape_style

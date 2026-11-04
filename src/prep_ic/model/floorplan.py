@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Floorplan: hard macros placed in the core. Pure Python, no GUI imports.
 
 Macro coordinates are in µm with the origin at the top-left corner of the macro and y pointing

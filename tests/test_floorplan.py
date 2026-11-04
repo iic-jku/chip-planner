@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
+# SPDX-License-Identifier: Apache-2.0
 """Floorplan: LEF reading, macro placement and padframe generation."""
 
 import json
@@ -209,7 +211,8 @@ class ReloadTests(unittest.TestCase):
             stored = json.loads(target.read_text())["floorplan"]["macros"][0]["path"]
             self.assertFalse(Path(stored).is_absolute())
             q = prep.load(target)
-            self.assertEqual(Path(q.floorplan.macros[0].path), self.dir)
+            # load() resolves the project folder, which expands 8.3 names such as RUNNER~1 in TEMP
+            self.assertEqual(Path(q.floorplan.macros[0].path), self.dir.resolve())
             self.assertEqual(q.load_warnings, [])
         self.assertEqual(p.floorplan.macros[0].path, str(self.dir))  # saving does not change the project
 

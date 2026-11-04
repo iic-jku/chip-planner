@@ -5,15 +5,18 @@
 # PREP-IC: Pinout, Ring and Early floorplan Planner for ICs
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/iic-jku/prep-ic/blob/main/LICENSE)
-![Python 3.9+](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)
+[![License Check](https://github.com/iic-jku/prep-ic/actions/workflows/license-check.yml/badge.svg)](https://github.com/iic-jku/prep-ic/actions/workflows/license-check.yml)
+[![Tests](https://github.com/iic-jku/prep-ic/actions/workflows/tests.yml/badge.svg)](https://github.com/iic-jku/prep-ic/actions/workflows/tests.yml)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?logo=python&logoColor=white)
 ![GUI: PySide6-Essentials](https://img.shields.io/badge/GUI-PySide6--Essentials-41CD52.svg?logo=qt&logoColor=white)
+[![PyPI](https://img.shields.io/pypi/v/prep-ic.svg)](https://pypi.org/project/prep-ic/)
 
-(c) 2026 Maximilian Golser
+(c) 2026 Maximilian Golser and Simon Dorrer
 
 Institute for Integrated Circuits and Quantum Computing (IICQC), Johannes Kepler University (JKU), Linz, Austria
 
 > [!IMPORTANT]
-> PREP-IC (GUI, CLI and Python API) runs anywhere with **Python ≥ 3.9** and **PySide6-Essentials**, see [Install](https://github.com/iic-jku/prep-ic#install) below. The CLI export and the Python API do not load Qt at all.
+> PREP-IC (GUI, CLI and Python API) runs anywhere with **Python ≥ 3.10** and **PySide6-Essentials**, see [Install](https://github.com/iic-jku/prep-ic#install) below. The CLI export and the Python API do not load Qt at all.
 > *Using* the exported files needs a **LibreLane** chip flow and the **IHP Open PDK** (SG13G2 or SG13CMOS5L). The easiest way to get both is the [IIC-OSIC-TOOLS](https://github.com/iic-jku/IIC-OSIC-TOOLS) container.
 
 
@@ -71,6 +74,7 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 │  │  └─ svg.py                  SVG drawing of the pad ring
 │  ├─ 📁 gui/                    PySide6-Essentials, uses only the model and formats API
 │  │  ├─ 📁 assets/              the logo
+│  │  ├─ about_dialog.py         Help → About: version, authors, license and links
 │  │  ├─ app.py                  the GUI launcher
 │  │  ├─ chip_view.py            IO ring, core, draggable macros, flylines and markers
 │  │  ├─ macro_panel.py          the macro list
@@ -99,9 +103,17 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 │  ├─ test_model.py              entry parser, settings, die and core sizing
 │  ├─ test_pdk.py                PDK profiles, IO cells, LibreLane and bondplan exports
 │  └─ test_qt_essentials.py      guards the PySide6-Essentials-only dependency
+├─ 📁 LICENSES/                  license texts the REUSE check resolves against
+│  └─ Apache-2.0.txt
+├─ 📁 .github/workflows/         CI
+│  ├─ license-check.yml          reuse lint: every file carries copyright and license
+│  └─ tests.yml                  the unittest suite on Linux, Windows and macOS, Python 3.10 and 3.15
+├─ CITATION.cff
 ├─ LICENSE                       Apache-2.0
+├─ MANIFEST.in                   sdist manifest (adds the REUSE files)
 ├─ pyproject.toml                packaging, dependency and the prep-ic entry point
 ├─ README.md
+├─ REUSE.toml                    licensing of files that cannot carry an SPDX header
 └─ ToDo.md                       planned work: sky130A and gf180mcuD, release
 ```
 
@@ -110,12 +122,18 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 
 ### Install
 
-From GitHub:
+From PyPI:
+
+```bash
+pip install prep-ic
+# or, for an isolated install with its own command on PATH:
+pipx install prep-ic
+```
+
+The development version from GitHub:
 
 ```bash
 pip install git+https://github.com/iic-jku/prep-ic.git
-# or, for an isolated install with its own command on PATH:
-pipx install git+https://github.com/iic-jku/prep-ic.git
 ```
 
 From source (for development), an editable install:
@@ -131,7 +149,7 @@ python -m venv .venv
 pip install -e .
 ```
 
-The only dependency is PySide6-Essentials, which pip installs with it.
+The only dependency is PySide6-Essentials, which pip installs with it. On Linux with Python 3.10 or 3.11 it stays below 6.12, since a reference count bug in the 6.12.0 Linux wheels crashes these Python versions (see [PYSIDE-3474](https://qt-project.atlassian.net/browse/PYSIDE-3474), fixed for 6.12.1).
 
 ### Run the GUI
 
@@ -333,8 +351,8 @@ A further PDK is one more JSON file in `src/prep_ic/data/pdks/`, a further packa
 
 ```
 @misc{2026_prep_ic,
-  author = {Golser, Maximilian},
-  month = oct,
+  author = {Golser, Maximilian and Dorrer, Simon},
+  month = nov,
   year = {2026},
   title = {{GitHub Repository of PREP-IC: Pinout, Ring and Early floorplan Planner for ICs}},
   url = {https://github.com/iic-jku/prep-ic}

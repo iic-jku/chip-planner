@@ -1,0 +1,24 @@
+version = 1
+
+# Files that cannot carry an SPDX header (configs, documentation, JSON data, LEF abstracts and figures) are annotated here.
+# Python files and workflows carry their own headers, so the license check still catches a new source file without one.
+
+[[annotations]]
+path = [".gitattributes", ".gitignore", "CITATION.cff", "MANIFEST.in", "pyproject.toml", "README.md", "ToDo.md"]
+SPDX-FileCopyrightText = "2026 Maximilian Golser and Simon Dorrer"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "doc/**"
+SPDX-FileCopyrightText = "2026 Maximilian Golser and Simon Dorrer"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["examples/*.json", "examples/macros/**", "tests/data/**"]
+SPDX-FileCopyrightText = "2026 Maximilian Golser and Simon Dorrer"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["src/prep_ic/data/**", "src/prep_ic/gui/assets/**"]
+SPDX-FileCopyrightText = "2026 Maximilian Golser and Simon Dorrer"
+SPDX-License-Identifier = "Apache-2.0"
