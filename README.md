@@ -9,6 +9,7 @@
 [![Tests](https://github.com/iic-jku/prep-ic/actions/workflows/tests.yml/badge.svg)](https://github.com/iic-jku/prep-ic/actions/workflows/tests.yml)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?logo=python&logoColor=white)
 ![GUI: PySide6-Essentials](https://img.shields.io/badge/GUI-PySide6--Essentials-41CD52.svg?logo=qt&logoColor=white)
+[![PyPI](https://img.shields.io/pypi/v/prep-ic.svg)](https://pypi.org/project/prep-ic/)
 
 (c) 2026 Maximilian Golser and Simon Dorrer
 
@@ -121,12 +122,18 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 
 ### Install
 
-From GitHub:
+From PyPI:
+
+```bash
+pip install prep-ic
+# or, for an isolated install with its own command on PATH:
+pipx install prep-ic
+```
+
+The development version from GitHub:
 
 ```bash
 pip install git+https://github.com/iic-jku/prep-ic.git
-# or, for an isolated install with its own command on PATH:
-pipx install git+https://github.com/iic-jku/prep-ic.git
 ```
 
 From source (for development), an editable install:
