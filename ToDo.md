@@ -3,7 +3,7 @@
 Planned work on PREP-IC. Each item names the files it touches. Remove an item in the commit that finishes it.
 
 
-## IMPORTANT: known defects of 0.1.0
+## IMPORTANT: known defects of 0.1.0 and 0.1.1
 
 Found on 2026-11-04 by running the exports through LibreLane and the chip templates' `run_bondplan.py`. Fix these before the planned work below.
 
@@ -11,6 +11,19 @@ Found on 2026-11-04 by running the exports through LibreLane and the chip templa
 - [ ] **`prep-ic export` is silent about most problems (`cli.py`).** It prints only `layout.warnings`, and no warning changes the exit code. It never shows `project.load_warnings` (macro LEF gone, marked pin no longer in the LEF) or `analyse()` (crossings, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks). So `examples/chip_demo.json`, which has a crossing and a missing pad by design, exports with exit 0 and no output. Print them in the export, and add a `prep-ic check PROJECT` that lists all of them and exits non-zero on a finding, so scripts and coding agents can rely on it. It should also flag a mistyped tag: `A [foo]` silently becomes a pad named `A [foo]`.
 - [ ] **`macros.yaml` fails lint as exported (`formats/librelane.py`, `macros_yaml`).** It writes only `gds` and `lef`, so Verilator stops with `MODMISSING` for lack of a Verilog view. Adding `vh: [dir::<macro dir>/final/vh/<macro>.vh]` by hand was enough to place the macro at its planned location (checked through `OpenROAD.TapEndcapInsertion`). LibreLane run directories have this file, so export `vh` when it exists, and consider `nl`, `pnl`, `lib` and `spef` the same way.
 - [ ] **The README misleads in two places (`README.md`).** The scripting example says `analyse(project).warnings` holds the crossings, but they are only in `analyse(project).crossings`, so fix the comment or add them to the warnings. The PDK table says "Default pad pitch 100 µm", but a new project stays at 80 µm with a PDK, in the API and in the GUI, because the GUI only raises a pitch below the cell width. Fix the text or the default.
+
+
+## Open after the 0.1.1 release
+
+- [ ] **IIC-OSIC-TOOLS image ([PR #415](https://github.com/iic-jku/IIC-OSIC-TOOLS/pull/415)).** Open against `next_release`, it pins `prep-ic==0.1.1` and adds the menu entry, the README and release-note lines and an import check in test 03. That branch has no CI and no image was built, so check the first image that carries it with test 03. Once a tagged image holds it, say so in the *IMPORTANT* box of `README.md`, as snp2le does. A release that fixes the defects above needs a new pin.
+- [ ] **PySide6 limit (`pyproject.toml`, `README.md`).** On Linux with Python 3.10 and 3.11 the dependency stays below 6.12, since the 6.12.0 wheels abort these Python versions. [PYSIDE-3474](https://qt-project.atlassian.net/browse/PYSIDE-3474) names a fix for 6.12.1, not released on 2026-11-04. While the limit is there, CI cannot see a fixed release on those Pythons, so lift it on a branch and read the `ubuntu-latest, 3.10` job. The ticket reports `Signal.emit()` and the abort here came from `QFont` setters, so that job decides, not the ticket's state.
+- [ ] **Maximilian Golser on PyPI and in `CITATION.cff`.** Only Simon Dorrer's account owns `prep-ic` on PyPI, so add him as a maintainer. `CITATION.cff` and the Zenodo record have no ORCID for him.
+
+
+## Other repos
+
+- [ ] **snp2le has the same PySide6 dependency (`pyproject.toml`).** It declares `PySide6-Essentials>=6.6` and Python 3.10 with no limit for Linux. Four of its GUI test files (25 tests) pass on Linux with Python 3.10 and PySide6 6.12.0, and it calls neither of the two `QFont` setters measured here, but other calls and a long session were not measured.
+- [ ] **snp2le's `CITATION.cff` fails validation.** `date-released: 2026` is no full date, so `cffconvert --validate` rejects it.
 
 
 ## New PDKs: sky130A and gf180mcuD
