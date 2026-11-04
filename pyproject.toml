@@ -3,22 +3,22 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "chip-planner"
+name = "prep-ic"
 dynamic = ["version"]
-description = "Plan IC pad ring pinouts with live die sizing, RF/GSG pad groups and exports."
+description = "PREP-IC (Pinout, Ring and Early floorplan Planner for ICs): plan IC pad ring pinouts with live die sizing, RF/GSG pad groups and exports."
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Maximilian Golser" }]
 dependencies = ["PySide6-Essentials>=6.6"]
 
 [project.scripts]
-chip-planner = "chip_planner.cli:main"
+prep-ic = "prep_ic.cli:main"
 
 [tool.setuptools.dynamic]
-version = { attr = "chip_planner.__version__" }
+version = { attr = "prep_ic.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-chip_planner = ["data/*.json", "data/pdks/*.json", "gui/assets/*.svg"]
+prep_ic = ["data/*.json", "data/pdks/*.json", "gui/assets/*.svg"]

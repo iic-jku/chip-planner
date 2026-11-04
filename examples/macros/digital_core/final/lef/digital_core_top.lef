@@ -1,4 +1,4 @@
-# Demo macro for chip-planner (abstract only: size and pins)
+# Demo macro for PREP-IC (abstract only: size and pins)
 VERSION 5.8 ;
 BUSBITCHARS "[]" ;
 DIVIDERCHAR "/" ;

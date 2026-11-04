@@ -106,7 +106,7 @@ def build_layout(project, selected=None):
 
     ``selected`` is a pin tag (``"L:3"``) to highlight. Primitives are dicts with
     ``k`` in rect/line/circle/text; renderers map their ``style`` via
-    :func:`chip_planner.style.shape_style`.
+    :func:`prep_ic.style.shape_style`.
     """
     cfg = project.settings.sanitized()
     mode, align, square = cfg.mode, cfg.align, cfg.square

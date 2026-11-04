@@ -3,15 +3,15 @@ import unittest
 
 from tests import ROOT  # noqa: F401  (sets the import path)
 
-import chip_planner as cp
-from chip_planner.formats.librelane import (bondplan_yaml, chip_top_sv, config_yaml, librelane_files,
+import prep_ic as prep
+from prep_ic.formats.librelane import (bondplan_yaml, chip_top_sv, config_yaml, librelane_files,
                                                pad_cfg_tcl)
-from chip_planner.model.parse import format_entry, infer_function, parse_line
+from prep_ic.model.parse import format_entry, infer_function, parse_line
 
 
 def compac_like(split=False, package=""):
     """8 pads per side on a 1600 µm IHP die, as in a real tapeout (checked with LibreLane)."""
-    p = cp.Project()
+    p = prep.Project()
     st = p.settings
     st.pdk, st.package = "ihp-sg13g2", package
     st.fixed_die, st.die_width, st.die_height, st.std.pitch = True, 1600, 1600, 115
@@ -44,7 +44,7 @@ class Syntax(unittest.TestCase):
             self.assertEqual(infer_function(name, typ), fn, name)
 
     def test_function_sets_type(self):
-        lay = cp.Project(sides={"L": ["AVDD [vdd]", "VDD_SENSE [analog]", "X [none]"],
+        lay = prep.Project(sides={"L": ["AVDD [vdd]", "VDD_SENSE [analog]", "X [none]"],
                                  "T": [], "R": [], "B": []}).layout()
         self.assertEqual([p.type for p in lay.pins], ["pwr", "ana", "nc"])
 
@@ -109,7 +109,7 @@ class Packaging(unittest.TestCase):
         self.assertIn(25, lay.unbonded_leads)
 
     def test_lcc_pin1_top_centre(self):
-        leads = cp.get_package("JLCC44_A4").leads()
+        leads = prep.get_package("JLCC44_A4").leads()
         self.assertEqual(leads["T"], [40, 41, 42, 43, 44, 1, 2, 3, 4, 5, 6])
         self.assertEqual(leads["L"][0], 7)
 
@@ -117,7 +117,7 @@ class Packaging(unittest.TestCase):
 class LibreLaneOutput(unittest.TestCase):
     def test_needs_pdk(self):
         with self.assertRaises(ValueError):
-            librelane_files(cp.Project.example())
+            librelane_files(prep.Project.example())
 
     def test_names_match_between_files(self):
         lay = compac_like(split=True).layout()
@@ -155,8 +155,8 @@ class LibreLaneOutput(unittest.TestCase):
 class MacroExport(unittest.TestCase):
     def project(self):
         import os
-        from chip_planner.formats.lef import read_lef
-        from chip_planner.model.floorplan import Macro, MacroDef
+        from prep_ic.formats.lef import read_lef
+        from prep_ic.model.floorplan import Macro, MacroDef
         d = ROOT / "tests" / "data" / "macros" / "adc_sar"
         (m,) = read_lef(d / "final" / "lef" / "adc_sar_top.lef")
         p = compac_like()
@@ -165,8 +165,8 @@ class MacroExport(unittest.TestCase):
         return p
 
     def test_macros_yaml(self):
-        from chip_planner.formats.librelane import macros_yaml
-        from chip_planner.model.floorplan import core_area
+        from prep_ic.formats.librelane import macros_yaml
+        from prep_ic.model.floorplan import core_area
         p = self.project()
         lay = p.layout()
         x0, y0, _, _ = core_area(lay)
@@ -179,7 +179,7 @@ class MacroExport(unittest.TestCase):
         self.assertIn("# placeholder dig (no LEF) not exported", text)
 
     def test_macros_yaml_keeps_three_decimals(self):
-        from chip_planner.formats.librelane import _num
+        from prep_ic.formats.librelane import _num
         self.assertEqual((_num(1790.565), _num(160.0), _num(0.1 + 0.2)), ("1790.565", "160", "0.3"))
 
     def test_macros_yaml_only_with_macros(self):

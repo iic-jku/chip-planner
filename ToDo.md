@@ -1,11 +1,11 @@
 # ToDo
 
-Planned work on chip-planner. Each item names the files it touches. Remove an item in the commit that finishes it.
+Planned work on PREP-IC. Each item names the files it touches. Remove an item in the commit that finishes it.
 
 
 ## New PDKs: sky130A and gf180mcuD
 
-Neither PDK fits the current profile format, which follows the IHP IO libraries: one cell width, a separate bondpad cell, one pin per supply rail and IO cells without control pins. So one more JSON file in `src/chip_planner/data/pdks/` is not enough. The profile format grows first, then the two profiles follow.
+Neither PDK fits the current profile format, which follows the IHP IO libraries: one cell width, a separate bondpad cell, one pin per supply rail and IO cells without control pins. So one more JSON file in `src/prep_ic/data/pdks/` is not enough. The profile format grows first, then the two profiles follow.
 
 The references are the IO libraries of each PDK (`libs.ref/<io_library>/lef/` and the LibreLane PDK config) and the public chip templates [sky130A-ams-chip-template](https://github.com/iic-jku/sky130A-ams-chip-template) and [gf180mcuD-ams-chip-template](https://github.com/iic-jku/gf180mcuD-ams-chip-template), whose `rtl/chip_top.sv` and `flow/librelane/` hold a working pad ring of each PDK. Every number in a profile comes from the LEF, as for the IHP profiles.
 
@@ -45,4 +45,4 @@ The references are the IO libraries of each PDK (`libs.ref/<io_library>/lef/` an
 
 - [ ] SPDX headers (`SPDX-FileCopyrightText: 2026 Maximilian Golser`, `SPDX-License-Identifier: Apache-2.0`) in the source and test files, and a `CITATION.cff` that matches the BibTeX entry of the README.
 - [ ] CI: a GitHub workflow that runs `python -m unittest discover -s tests -t .` (GUI tests offscreen) on Linux, Windows and macOS, for Python 3.9 and the newest Python.
-- [ ] PyPI release and a Zenodo DOI, then the badges, `pip install chip-planner` in *Install* and the DOI in *Cite This Work*.
+- [ ] PyPI release and a Zenodo DOI, then the badges, `pip install prep-ic` in *Install* and the DOI in *Cite This Work*.

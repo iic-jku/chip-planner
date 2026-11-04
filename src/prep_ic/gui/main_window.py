@@ -25,7 +25,7 @@ from .qt import (QAbstractItemView, QAction, QActionGroup, QApplication, QBrush,
 from .scene import fill_scene, make_pen, mono_family
 from .widgets import OPTIONS_ROLE, VALUE_ROLE, ComboDelegate, SideEditor, spin
 
-CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "chip-planner"
+CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "prep-ic"
 LAST_STATE = CONFIG_DIR / "last-qt.json"
 VIEW_SETTINGS = CONFIG_DIR / "view.json"   # view preferences (theme), not part of a project
 THEMES = (("system", "System"), ("light", "Light"), ("dark", "Dark"))

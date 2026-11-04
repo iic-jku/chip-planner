@@ -128,7 +128,7 @@ class Project:
         return line
 
     def layout(self, selected=None):
-        """Compute the layout, see :func:`chip_planner.model.layout.build_layout`."""
+        """Compute the layout, see :func:`prep_ic.model.layout.build_layout`."""
         from .layout import build_layout
         return build_layout(self, selected)
 

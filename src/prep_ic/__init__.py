@@ -1,26 +1,26 @@
-"""chip-planner: plan IC pad ring pinouts.
+"""PREP-IC (Pinout, Ring and Early floorplan Planner for ICs): plan IC pad ring pinouts.
 
 Scripting API (no Qt needed)::
 
-    import chip_planner as cp
+    import prep_ic as prep
 
-    project = cp.load("chip.json")
+    project = prep.load("chip.json")
     project.sides["L"].append("VDDA [p]")
     project.settings.std.pitch = 90
     layout = project.layout()
     print(layout.die_width, layout.die_height, layout.warnings)
-    cp.export_csv(project, "pins.csv")
-    cp.export_svg(project, "ring.svg")
-    cp.save(project, "chip.json")
+    prep.export_csv(project, "pins.csv")
+    prep.export_svg(project, "ring.svg")
+    prep.save(project, "chip.json")
 
-    project.settings.pdk = "ihp-sg13g2"          # see cp.pdk_names()
-    project.settings.package = "OP_QFN32_A4_FIT"  # see cp.package_names()
-    cp.export_librelane(project, "flow/padring")   # config part, pad_cfg.tcl, chip_top.sv, …
+    project.settings.pdk = "ihp-sg13g2"          # see prep.pdk_names()
+    project.settings.package = "OP_QFN32_A4_FIT"  # see prep.package_names()
+    prep.export_librelane(project, "flow/padring")   # config part, pad_cfg.tcl, chip_top.sv, …
 """
 
 # defined before the imports: submodules import them
 __version__ = "0.1.0"
-APP_NAME = "chip-planner"
+APP_NAME = "PREP-IC"
 
 from .formats.lef import read_lef
 from .formats.librelane import export_librelane, librelane_files

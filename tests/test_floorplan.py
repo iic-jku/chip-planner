@@ -8,10 +8,10 @@ from pathlib import Path
 
 from tests import ROOT
 
-import chip_planner as cp
-from chip_planner.formats.lef import parse_lef, pick_macro, read_lef
-from chip_planner.model.chip import add_missing_pads as generate_pads
-from chip_planner.model.floorplan import (Floorplan, Macro, MacroDef, MacroPin, core_area, core_origin, find_lef,
+import prep_ic as prep
+from prep_ic.formats.lef import parse_lef, pick_macro, read_lef
+from prep_ic.model.chip import add_missing_pads as generate_pads
+from prep_ic.model.floorplan import (Floorplan, Macro, MacroDef, MacroPin, core_area, core_origin, find_lef,
                                           floorplan_warnings, io_signals, nearest_side,
                                           utilization)
 
@@ -97,7 +97,7 @@ class FloorplanTests(unittest.TestCase):
         self.assertEqual(nearest_side(500, 500, 1000, 1000), "T")  # tie: T, R, B, L
 
     def test_core_area(self):
-        p = cp.Project(sides={"L": ["A"]})
+        p = prep.Project(sides={"L": ["A"]})
         p.settings.fixed_core, p.settings.square = True, False
         lay = p.layout()
         self.assertEqual(core_area(lay), (120.0, 120.0, 1500.0, 1200.0))
@@ -109,7 +109,7 @@ class FloorplanTests(unittest.TestCase):
         self.assertGreater(lay.core_margin, 0)
 
     def test_overlap_and_outside_core_warning(self):
-        p = cp.Project()
+        p = prep.Project()
         p.settings.fixed_core = True  # the core fits the die, only the macro warnings remain
         p.settings.core_width, p.settings.core_height = 300.0, 300.0
         p.floorplan.macros = [adc("a0"), adc("a1", x=100.0)]
@@ -121,7 +121,7 @@ class FloorplanTests(unittest.TestCase):
         self.assertEqual(floorplan_warnings(p), [])
 
     def test_utilization(self):
-        p = cp.Project()
+        p = prep.Project()
         p.settings.fixed_core = True
         p.settings.core_width, p.settings.core_height = 1000.0, 1000.0
         p.floorplan.macros = [adc(), Macro("d", cache=MacroDef("d", 100.0, 100.0))]
@@ -133,28 +133,28 @@ class FloorplanTests(unittest.TestCase):
         self.assertEqual(Floorplan().instance_name("pll"), "pll0")
 
     def test_macro_fields_round_trip(self):
-        p = cp.Project()
+        p = prep.Project()
         m = adc("a0")
         m.cls, m.halo, m.domain = "sensitive", 35.0, "ANA"
         p.floorplan.macros = [m, adc("a1")]
         d = p.to_dict()["floorplan"]["macros"]
         self.assertEqual((d[0]["class"], d[0]["halo"], d[0]["domain"]), ("sensitive", 35.0, "ANA"))
         self.assertNotIn("halo", d[1])
-        self.assertEqual(cp.Project.from_dict(p.to_dict()), p)
+        self.assertEqual(prep.Project.from_dict(p.to_dict()), p)
         old = Macro.from_dict({"name": "x"})
         self.assertEqual((old.cls, old.halo, old.domain), ("normal", None, ""))
         self.assertEqual(Macro.from_dict({"name": "x", "class": "loud"}).cls, "normal")
 
     def test_json_round_trip(self):
-        p = cp.Project.example()
+        p = prep.Project.example()
         p.floorplan.macros = [adc("adc0", 10.0, 20.0, 90, ["VIN_P"]), adc("adc1", 500.0, 20.0),
                               Macro("digital", cache=MacroDef("digital", 600.0, 400.0))]
         d = p.to_dict()
         self.assertEqual(d["floorplan"]["macros"][0]["io"], ["VIN_P"])
-        self.assertEqual(cp.Project.from_dict(d), p)
-        self.assertNotIn("floorplan", cp.Project.example().to_dict())
-        self.assertEqual(cp.Project.from_dict({"sides": {}}).floorplan, Floorplan())
-        self.assertEqual(cp.Project.from_dict({"sides": {}, "floorplan": {"macros": [{"bad": 1}, 3]}}).floorplan,
+        self.assertEqual(prep.Project.from_dict(d), p)
+        self.assertNotIn("floorplan", prep.Project.example().to_dict())
+        self.assertEqual(prep.Project.from_dict({"sides": {}}).floorplan, Floorplan())
+        self.assertEqual(prep.Project.from_dict({"sides": {}, "floorplan": {"macros": [{"bad": 1}, 3]}}).floorplan,
                          Floorplan())
 
 
@@ -202,34 +202,34 @@ class ReloadTests(unittest.TestCase):
         self.assertEqual(m.size(), (420.0, 310.0))
 
     def test_paths_relative_to_project_file(self):
-        p = cp.Project()
+        p = prep.Project()
         p.floorplan.macros = [Macro.from_dir(str(self.dir), "a0")]
         for target in (self.tmp / "a" / "p.json", self.tmp / "b" / "sub" / "p.json"):
-            cp.save(p, target)
+            prep.save(p, target)
             stored = json.loads(target.read_text())["floorplan"]["macros"][0]["path"]
             self.assertFalse(Path(stored).is_absolute())
-            q = cp.load(target)
+            q = prep.load(target)
             self.assertEqual(Path(q.floorplan.macros[0].path), self.dir)
             self.assertEqual(q.load_warnings, [])
         self.assertEqual(p.floorplan.macros[0].path, str(self.dir))  # saving does not change the project
 
     def test_load_reads_lef_again(self):
-        p = cp.Project()
+        p = prep.Project()
         p.floorplan.macros = [Macro.from_dir(str(self.dir), "a0")]
         target = self.tmp / "p.json"
-        cp.save(p, target)
+        prep.save(p, target)
         self.lef.write_text(self.lef.read_text().replace("SIZE 420.000", "SIZE 430.000"))
-        self.assertEqual(cp.load(target).floorplan.macros[0].size(), (430.0, 310.0))
+        self.assertEqual(prep.load(target).floorplan.macros[0].size(), (430.0, 310.0))
 
     def test_api(self):
-        self.assertIs(cp.Macro, Macro)
-        self.assertIs(cp.Floorplan, Floorplan)
-        self.assertEqual(cp.read_lef(self.lef)[0].name, "adc_sar_top")
+        self.assertIs(prep.Macro, Macro)
+        self.assertIs(prep.Floorplan, Floorplan)
+        self.assertEqual(prep.read_lef(self.lef)[0].name, "adc_sar_top")
 
 
 class GenerateTests(unittest.TestCase):
     def project(self, *macros):
-        p = cp.Project()
+        p = prep.Project()
         p.floorplan.macros = list(macros)
         return p
 
@@ -276,7 +276,7 @@ class GenerateTests(unittest.TestCase):
         self.assertEqual(generate_pads(p), ["VIN_P"])
 
     def test_api(self):
-        self.assertIs(cp.generate_pads, generate_pads)
+        self.assertIs(prep.generate_pads, generate_pads)
 
 
 if __name__ == "__main__":

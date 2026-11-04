@@ -1,10 +1,10 @@
-# chip-planner Architecture
+# PREP-IC Architecture
 
-How the planner is built and the rules it follows, for anyone who changes it. The module map is the README's [Directory Structure](../README.md#directory-structure), the user-facing behavior its [How to Use](../README.md#how-to-use).
+How PREP-IC is built and the rules it follows, for anyone who changes it. The module map is the README's [Directory Structure](../README.md#directory-structure), the user-facing behavior its [How to Use](../README.md#how-to-use).
 
 ## Layers and data flow
 
-`chip_planner` is one package with a pure-Python core and a thin GUI:
+`prep_ic` is one package with a pure-Python core and a thin GUI:
 
 - `model/`, `formats/`, `style.py`, `cli.py` and `__init__.py` import no Qt. `tests/test_formats.py` checks it twice, by a source scan and by an export run that must leave PySide6, PyQt6 and shiboken6 unloaded.
 - `gui/` imports Qt only through `gui/qt.py` and uses only PySide6-Essentials modules, which `tests/test_qt_essentials.py` enforces together with the `PySide6-Essentials` dependency in `pyproject.toml`. The reason is Essentials-only installs such as the IIC-OSIC-TOOLS image.

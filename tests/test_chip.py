@@ -4,12 +4,12 @@ import unittest
 
 from tests import ROOT
 
-import chip_planner as cp
-from chip_planner.formats.lef import read_lef
-from chip_planner.model.chip import (add_missing_pads, align_macros, analyse, auto_rotate, diff_partner, drop_index,
+import prep_ic as prep
+from prep_ic.formats.lef import read_lef
+from prep_ic.model.chip import (add_missing_pads, align_macros, analyse, auto_rotate, diff_partner, drop_index,
                                      move_line, optimize_pad_order, place_line, suggest_supply_pads,
                                      toggle_lock)
-from chip_planner.model.floorplan import Macro, MacroDef
+from prep_ic.model.floorplan import Macro, MacroDef
 
 MACRO_DIR = ROOT / "tests" / "data" / "macros" / "adc_sar"
 FIXTURE = MACRO_DIR / "final" / "lef" / "adc_sar_top.lef"
@@ -26,7 +26,7 @@ def box(name, x, y, w=100.0, h=100.0, cls="normal"):
 
 def chip(sides=None, macros=()):
     """No PDK, fixed core 1500 × 1200: die 1740 × 1440, core area from (120, 120)."""
-    p = cp.Project(sides={s: list((sides or {}).get(s, [])) for s in "TRBL"})
+    p = prep.Project(sides={s: list((sides or {}).get(s, [])) for s in "TRBL"})
     p.settings.fixed_core, p.settings.square = True, False
     p.floorplan.macros = list(macros)
     return p
@@ -53,7 +53,7 @@ class AnalyseTests(unittest.TestCase):
 
     def test_flyline_to_group_signal_pad(self):
         p = chip(sides={"L": ["RFIN [gsg]"]}, macros=[box("lna", 0.0, 0.0)])
-        p.floorplan.macros[0].cache.pins.append(cp.model.floorplan.MacroPin("RFIN", "INPUT", "SIGNAL", 0.0, 50.0))
+        p.floorplan.macros[0].cache.pins.append(prep.model.floorplan.MacroPin("RFIN", "INPUT", "SIGNAL", 0.0, 50.0))
         p.floorplan.macros[0].io = ["RFIN"]
         lay = p.layout()
         (f,) = analyse(p, lay).flylines
@@ -158,7 +158,7 @@ class AnalyseTests(unittest.TestCase):
         self.assertEqual({x.side for x in s}, {"L"})  # next to the domain's pad X
 
     def test_no_macros(self):
-        c = analyse(cp.Project.example())
+        c = analyse(prep.Project.example())
         self.assertEqual((c.flylines, c.missing, c.crossings, c.longest, c.supplies), ([], [], 0, None, []))
 
     def test_drop_index(self):
@@ -259,7 +259,7 @@ class EditTests(unittest.TestCase):
         self.assertTrue(p.settings.fixed_core)
 
     def test_generate_pads_alias(self):
-        self.assertIs(cp.generate_pads, add_missing_pads)
+        self.assertIs(prep.generate_pads, add_missing_pads)
 
     def test_suggest_supply_pads(self):
         p = chip(sides={"R": ["X"]}, macros=[adc(x=1000.0, io=()), adc("a1", x=1000.0, y=600.0, io=())])
@@ -270,8 +270,8 @@ class EditTests(unittest.TestCase):
 
     def test_suggest_supply_pads_named_from_lef(self):
         m = box("m", 0.0, 0.0)
-        m.cache.pins += [cp.model.floorplan.MacroPin("VPWR", "INOUT", "POWER"),
-                         cp.model.floorplan.MacroPin("VGND", "INOUT", "GROUND")]
+        m.cache.pins += [prep.model.floorplan.MacroPin("VPWR", "INOUT", "POWER"),
+                         prep.model.floorplan.MacroPin("VGND", "INOUT", "GROUND")]
         p = chip(macros=[m])
         self.assertEqual(suggest_supply_pads(p), ["VPWR", "VGND"])
         lines = [l for s in "TRBL" for l in p.sides[s]]
@@ -386,7 +386,7 @@ class PlaceTests(unittest.TestCase):
 
 class DemoTests(unittest.TestCase):
     def test_demo_project(self):
-        p = cp.load(ROOT / "examples" / "chip_demo.json")
+        p = prep.load(ROOT / "examples" / "chip_demo.json")
         self.assertEqual(p.load_warnings, [])
         self.assertEqual([m.name for m in p.floorplan.macros], ["adc_sar0", "pll0", "lna0", "digital_core0"])
         c = analyse(p)
@@ -395,7 +395,7 @@ class DemoTests(unittest.TestCase):
         add_missing_pads(p)
         c = analyse(p)
         self.assertEqual((c.crossings, c.missing), (0, []))
-        self.assertIn("macros.yaml", cp.librelane_files(p))
+        self.assertIn("macros.yaml", prep.librelane_files(p))
 
 if __name__ == "__main__":
     unittest.main()

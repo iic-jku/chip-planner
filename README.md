@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/src/chip_planner/gui/assets/chip_planner_logo.svg" alt="chip-planner logo" width="140">
+  <img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/src/prep_ic/gui/assets/prep_ic_logo.svg" alt="PREP-IC logo" width="140">
 </p>
 
-# chip-planner: A PySide6 GUI and Python API for Planning IC Pad Rings, Pinouts and Chip Floorplans
+# PREP-IC: Pinout, Ring and Early floorplan Planner for ICs
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/iic-jku/chip-planner/blob/main/LICENSE)
 ![Python 3.9+](https://img.shields.io/badge/Python-3.9+-3776AB.svg?logo=python&logoColor=white)
@@ -13,14 +13,14 @@
 Institute for Integrated Circuits and Quantum Computing (IICQC), Johannes Kepler University (JKU), Linz, Austria
 
 > [!IMPORTANT]
-> chip-planner (GUI, CLI and Python API) runs anywhere with **Python ≥ 3.9** and **PySide6-Essentials**, see [Install](https://github.com/iic-jku/chip-planner#install) below. The CLI export and the Python API do not load Qt at all.
+> PREP-IC (GUI, CLI and Python API) runs anywhere with **Python ≥ 3.9** and **PySide6-Essentials**, see [Install](https://github.com/iic-jku/chip-planner#install) below. The CLI export and the Python API do not load Qt at all.
 > *Using* the exported files needs a **LibreLane** chip flow and the **IHP Open PDK** (SG13G2 or SG13CMOS5L). The easiest way to get both is the [IIC-OSIC-TOOLS](https://github.com/iic-jku/IIC-OSIC-TOOLS) container.
 
 
 
 ## Description
 
-**chip-planner** plans the pad ring and the pinout of an IC before its layout starts. You type the pads of each side, one line per pad, and the die grows with them (pad-limited), so pad count, pitch and die size never disagree. It is made for analog, mixed-signal and RF designers doing early floorplanning.
+**PREP-IC** is a PySide6 GUI and Python API that plans the pad ring and the pinout of an IC before its layout starts. You type the pads of each side, one line per pad, and the die grows with them (pad-limited), so pad count, pitch and die size never disagree. It is made for analog, mixed-signal and RF designers doing early floorplanning.
 
 It works in three layers, each optional on top of the one before:
 
@@ -30,20 +30,20 @@ It works in three layers, each optional on top of the one before:
 
 The plan goes straight into the chip flow: the pad ring part of the LibreLane `config.yaml`, a `pad_cfg.tcl` that places the IO cells exactly as planned, a `chip_top.sv` with the IO cell instances, the matching core template, `macros.yaml` and the bondplan `PINOUT`. A pin list (CSV) and the drawing (SVG, PNG) document it.
 
-The code is split into a pure-Python, Qt-free model and exporters (`chip_planner.model`, `chip_planner.formats`) behind a scripting API, and a thin `chip_planner.gui` on PySide6-Essentials. The CLI exports without the GUI. How it is built and the rules it follows are in [`doc/architecture.md`](https://github.com/iic-jku/chip-planner/blob/main/doc/architecture.md).
+The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.model`, `prep_ic.formats`) behind a scripting API, and a thin `prep_ic.gui` on PySide6-Essentials. The CLI exports without the GUI. How it is built and the rules it follows are in [`doc/architecture.md`](https://github.com/iic-jku/chip-planner/blob/main/doc/architecture.md).
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/chip_planner_chip_view.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/chip_planner_chip_view.png" alt="chip-planner chip view with macros and flylines" width="85%"></a><br>
+  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_chip_view.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_chip_view.png" alt="PREP-IC chip view with macros and flylines" width="85%"></a><br>
   <em>The chip view of <code>examples/chip_demo.json</code>: an IHP SG13G2 IO ring with the power domains ANA and DIG, four macros with their flylines, one crossing (orange) and one checked pin without a pad.</em>
 </p>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/chip_planner_io_ring.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/chip_planner_io_ring.png" alt="chip-planner IO ring with two power domains" width="85%"></a><br>
+  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_io_ring.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_io_ring.png" alt="PREP-IC IO ring with two power domains" width="85%"></a><br>
   <em>The IO ring of <code>examples/ihp_sg13g2_domains.json</code>: 26 IHP SG13G2 IO cells on a fixed 1.6 × 1.6 mm die, split into the power domains MAIN and ANA.</em>
 </p>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/chip_planner_librelane.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/chip_planner_librelane.png" alt="chip-planner LibreLane output" width="85%"></a><br>
+  <a href="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_librelane.png"><img src="https://raw.githubusercontent.com/iic-jku/chip-planner/main/doc/fig/prep_ic_librelane.png" alt="PREP-IC LibreLane output" width="85%"></a><br>
   <em>The LibreLane tab: the pad ring part of <code>config.yaml</code>, <code>pad_cfg.tcl</code>, <code>chip_top.sv</code>, the core template and the bondplan pinout, ready to copy or export.</em>
 </p>
 
@@ -61,7 +61,7 @@ The code is split into a pure-Python, Qt-free model and exporters (`chip_planner
 │  ├─ ihp_sg13g2_domains.json    IHP SG13G2 ring on a fixed die, two domains, QFN32 package
 │  ├─ padring.json               pad ring without a PDK
 │  └─ script_example.py          build, check and export a pad ring in code
-├─ 📁 src/chip_planner/          the package (pip-installable)
+├─ 📁 src/prep_ic/               the package (pip-installable)
 │  ├─ 📁 data/                   PDK profiles (pdks/*.json) and the package library (packages.json)
 │  ├─ 📁 formats/                project files and exports, no Qt
 │  │  ├─ lef.py                  minimal LEF reader: macro size and pins
@@ -87,7 +87,7 @@ The code is split into a pure-Python, Qt-free model and exporters (`chip_planner
 │  │  ├─ pdk.py                  PDK and package profiles
 │  │  └─ project.py              ring settings and the entry lines of each side
 │  ├─ __init__.py                scripting API and version
-│  ├─ __main__.py                python -m chip_planner
+│  ├─ __main__.py                python -m prep_ic
 │  ├─ cli.py                     command line: GUI or export
 │  └─ style.py                   color palettes shared by the GUI and the SVG export
 ├─ 📁 tests/                     unittest suite, the GUI tests run offscreen
@@ -100,7 +100,7 @@ The code is split into a pure-Python, Qt-free model and exporters (`chip_planner
 │  ├─ test_pdk.py                PDK profiles, IO cells, LibreLane and bondplan exports
 │  └─ test_qt_essentials.py      guards the PySide6-Essentials-only dependency
 ├─ LICENSE                       Apache-2.0
-├─ pyproject.toml                packaging, dependency and the chip-planner entry point
+├─ pyproject.toml                packaging, dependency and the prep-ic entry point
 ├─ README.md
 └─ ToDo.md                       planned work: sky130A and gf180mcuD, release
 ```
@@ -136,8 +136,8 @@ The only dependency is PySide6-Essentials, which pip installs with it.
 ### Run the GUI
 
 ```bash
-chip-planner              # after installing
-chip-planner chip.json    # the same, opened on that project
+prep-ic              # after installing
+prep-ic chip.json    # the same, opened on that project
 ```
 
 Without a file the GUI opens the project of the last session, or the built-in example on the first start. *File → Load Example* loads that example again, and more projects live in [`examples/`](https://github.com/iic-jku/chip-planner/tree/main/examples).
@@ -145,8 +145,8 @@ Without a file the GUI opens the project of the last session, or the built-in ex
 From a source checkout without installing, put `src` on the Python path and start the package as a module:
 
 ```bash
-PYTHONPATH=src python -m chip_planner                   # macOS / Linux
-$env:PYTHONPATH = "src"; python -m chip_planner         # Windows PowerShell
+PYTHONPATH=src python -m prep_ic                   # macOS / Linux
+$env:PYTHONPATH = "src"; python -m prep_ic         # Windows PowerShell
 ```
 
 ### Typical workflow
@@ -184,7 +184,7 @@ Options combine: `RFOUT [gsg] {70x70} @125`, `DOUT[3] [out] [4mA]`.
 In *Settings → Technology* choose a PDK (IHP SG13G2 or SG13CMOS5L) and optionally a package from the EUROPRACTICE library.
 
 - **With a PDK** the preview shows the real ring: the seal ring spacing, the IO cells, the corner cells and the bondpads (sizes in [Supported PDKs and Packages](https://github.com/iic-jku/chip-planner#supported-pdks-and-packages)). Function and drive of each pad are set in the *Pin List* or with tags in the editor. The rows of the *Pin List* also show the IO cell, the power domain and the package pin.
-- **Power splits**: an `=== NAME` line leaves a 10 µm gap in the IO ring. Every ring segment gets its own rails (`VDD_NAME`, `VSS_NAME`, `IOVDD_NAME`, `IOVSS_NAME`), and without splits they are `VDD`, `VSS`, `IOVDD` and `IOVSS`. The planner warns when a domain has no supply pad of a kind.
+- **Power splits**: an `=== NAME` line leaves a 10 µm gap in the IO ring. Every ring segment gets its own rails (`VDD_NAME`, `VSS_NAME`, `IOVDD_NAME`, `IOVSS_NAME`), and without splits they are `VDD`, `VSS`, `IOVDD` and `IOVSS`. PREP-IC warns when a domain has no supply pad of a kind.
 - **The LibreLane tab and *File → Export LibreLane Files…*** write:
   - `padring_config.yaml`: `DIE_AREA`, `CORE_AREA`, `PAD_CFG` and the `PAD_SOUTH/EAST/NORTH/WEST` lists, to copy into the LibreLane `config.yaml` (flow `Chip`),
   - `pad_cfg.tcl`: places the IO cells exactly as planned (LibreLane's default script spreads them evenly) and keeps the split gaps free,
@@ -197,7 +197,7 @@ In *Settings → Technology* choose a PDK (IHP SG13G2 or SG13CMOS5L) and optiona
 See [`examples/ihp_sg13g2_domains.json`](https://github.com/iic-jku/chip-planner/blob/main/examples/ihp_sg13g2_domains.json). From the command line:
 
 ```bash
-chip-planner export examples/ihp_sg13g2_domains.json --librelane flow/padring
+prep-ic export examples/ihp_sg13g2_domains.json --librelane flow/padring
 ```
 
 ### Chip view
@@ -236,28 +236,28 @@ In the *Fixed core size (minimum)* mode, which is set when the first macro is ad
 The package works without Qt:
 
 ```python
-import chip_planner as cp
+import prep_ic as prep
 
-project = cp.load("chip.json")
+project = prep.load("chip.json")
 project.sides["L"].append("VDDA [p]")
 project.settings.std.pitch = 90
 layout = project.layout()
 print(layout.die_width, layout.die_height, layout.warnings)
 for pin in layout.pins:
     print(pin.no, pin.name, pin.x, pin.y)
-cp.export_csv(project, "pins.csv")
-cp.export_svg(project, "ring.svg")
-cp.save(project, "chip.json")
+prep.export_csv(project, "pins.csv")
+prep.export_svg(project, "ring.svg")
+prep.save(project, "chip.json")
 
-macro = cp.Macro.from_dir("macros/adc_sar", "adc0")  # reads final/lef/adc_sar_top.lef
+macro = prep.Macro.from_dir("macros/adc_sar", "adc0")  # reads final/lef/adc_sar_top.lef
 macro.io = ["VIN_P", "VIN_N"]
 project.floorplan.macros.append(macro)
-cp.add_missing_pads(project)                         # adds VIN_P/VIN_N pads, fixed core mode
-print(cp.analyse(project).warnings)                  # crossings, pairs, analog and power checks
+prep.add_missing_pads(project)                         # adds VIN_P/VIN_N pads, fixed core mode
+print(prep.analyse(project).warnings)                  # crossings, pairs, analog and power checks
 
-project.settings.pdk = "ihp-sg13g2"                  # see cp.pdk_names()
-project.settings.package = "OP_QFN32_A4_FIT"         # see cp.package_names()
-cp.export_librelane(project, "flow/padring")         # padring_config.yaml, pad_cfg.tcl, chip_top.sv, ...
+project.settings.pdk = "ihp-sg13g2"                    # see prep.pdk_names()
+project.settings.package = "OP_QFN32_A4_FIT"           # see prep.package_names()
+prep.export_librelane(project, "flow/padring")         # padring_config.yaml, pad_cfg.tcl, chip_top.sv, ...
 ```
 
 `project.sides` holds each side in numbering order. `project.physical_lines(side)` and `project.set_physical_lines(side, lines)` use the order as seen on the die, like the GUI.
@@ -277,14 +277,14 @@ The GUI tests run offscreen and are skipped when Qt is not installed.
 
 | Command | Does |
 |---|---|
-| `chip-planner` | start the GUI on the last project |
-| `chip-planner chip.json` | start the GUI on `chip.json` |
-| `chip-planner --version` | print the version |
-| `chip-planner export chip.json --csv pins.csv` | write the pin list as CSV |
-| `chip-planner export chip.json --svg ring.svg` | write the drawing as SVG |
-| `chip-planner export chip.json --librelane DIR` | write the LibreLane files into `DIR` (needs a PDK in the project) |
+| `prep-ic` | start the GUI on the last project |
+| `prep-ic chip.json` | start the GUI on `chip.json` |
+| `prep-ic --version` | print the version |
+| `prep-ic export chip.json --csv pins.csv` | write the pin list as CSV |
+| `prep-ic export chip.json --svg ring.svg` | write the drawing as SVG |
+| `prep-ic export chip.json --librelane DIR` | write the LibreLane files into `DIR` (needs a PDK in the project) |
 
-The `export` options combine, e.g. `chip-planner export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and the layout warnings go to stderr. The export runs without Qt. From a source checkout without installing, use `python -m chip_planner` with `src` on the Python path in place of `chip-planner`.
+The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and the layout warnings go to stderr. The export runs without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
 
 
 ## Supported PDKs and Packages
@@ -326,17 +326,17 @@ The 25 packages are named after the cells of the EUROPRACTICE package library (`
 | SOIC | 16, 20, 24, 28 | top of the left side |
 | DIL | 16, 24, 28, 40, 48 | top of the left side |
 
-A further PDK is one more JSON file in `src/chip_planner/data/pdks/`, a further package one more entry in `src/chip_planner/data/packages.json`.
+A further PDK is one more JSON file in `src/prep_ic/data/pdks/`, a further package one more entry in `src/prep_ic/data/packages.json`.
 
 
 ## Cite This Work
 
 ```
-@misc{2026_chip_planner,
+@misc{2026_prep_ic,
   author = {Golser, Maximilian},
   month = oct,
   year = {2026},
-  title = {{GitHub Repository of chip-planner: A PySide6 GUI and Python API for Planning IC Pad Rings, Pinouts and Chip Floorplans}},
+  title = {{GitHub Repository of PREP-IC: Pinout, Ring and Early floorplan Planner for ICs}},
   url = {https://github.com/iic-jku/chip-planner}
 }
 ```

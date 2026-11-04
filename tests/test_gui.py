@@ -9,9 +9,9 @@ from tests import ROOT
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
-    from chip_planner.gui import main_window
-    from chip_planner.gui.qt import QApplication
-    from chip_planner.style import PALETTES
+    from prep_ic.gui import main_window
+    from prep_ic.gui.qt import QApplication
+    from prep_ic.style import PALETTES
 except ImportError:
     main_window = None
 
@@ -33,8 +33,8 @@ class GuiSmoke(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_loads_and_renders(self):
-        import chip_planner as cp
-        expected = cp.load(ROOT / "examples" / "padring.json")
+        import prep_ic as prep
+        expected = prep.load(ROOT / "examples" / "padring.json")
         self.assertEqual(self.win.get_project(), expected)
         self.assertEqual(self.win.table.rowCount(), 0)  # filled only when the Pin List is shown
         self.win.tabs.setCurrentWidget(self.win.table_page)
@@ -50,8 +50,8 @@ class GuiSmoke(unittest.TestCase):
         self.assertEqual(self.win.editors["T"].edit.labels[:3], ["40", "39", "38"])
         self.assertEqual(self.win.editors["R"].edit.labels[0], "24")
         self.assertEqual(self.win.editors["B"].edit.labels[0], "15")
-        import chip_planner as cp
-        self.win.set_project(cp.Project.example())
+        import prep_ic as prep
+        self.win.set_project(prep.Project.example())
         self.assertEqual(self.win.editors["T"].edit.labels, ["31", "30", "29–25", "24"])
 
     def test_mode_switch_keeps_editor_text(self):
@@ -120,7 +120,7 @@ class GuiSmoke(unittest.TestCase):
         w = self.win
         w.cb_pdk.setCurrentIndex(w.cb_pdk.findData("ihp-sg13g2"))
         w.render()
-        from chip_planner.gui.main_window import COL
+        from prep_ic.gui.main_window import COL
         from PySide6.QtWidgets import QStyleOptionViewItem
         w.tabs.setCurrentWidget(w.table_page)
         self.assertIsNone(w.table.cellWidget(0, COL["Function"]))  # editors only while editing
@@ -168,8 +168,8 @@ class GuiSmoke(unittest.TestCase):
         self.assertGreater(path.stat().st_size, 0)
 
     def test_logo_icon(self):
-        from chip_planner.gui.app import LOGO
-        from chip_planner.gui.qt import QIcon
+        from prep_ic.gui.app import LOGO
+        from prep_ic.gui.qt import QIcon
         self.assertTrue(LOGO.is_file())
         # null without Qt's SVG plugins, which ship in PySide6-Essentials
         self.assertFalse(QIcon(str(LOGO)).pixmap(32, 32).isNull())
@@ -185,11 +185,11 @@ class ChipGui(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
 
     def setUp(self):
-        import chip_planner as cp
+        import prep_ic as prep
         self.tmp = tempfile.TemporaryDirectory()
         main_window.LAST_STATE = Path(self.tmp.name) / "last.json"
         self.win = main_window.MainWindow(PALETTES["light"])
-        self.win.set_project(cp.Project())
+        self.win.set_project(prep.Project())
 
     def tearDown(self):
         self.win.setWindowModified(False)
@@ -277,7 +277,7 @@ class ChipGui(unittest.TestCase):
     def test_double_click_rotates_every_time(self):
         from PySide6.QtCore import QPoint
         from PySide6.QtTest import QTest
-        from chip_planner.gui.qt import Qt
+        from prep_ic.gui.qt import Qt
         w = self.win
         w.resize(1200, 800)
         w.show()
@@ -425,7 +425,7 @@ class ChipGui(unittest.TestCase):
         self.assertEqual(self.lines("T"), ["", "A", "B"])
 
     def test_measure_survives_redraw(self):
-        from chip_planner.gui.qt import QPointF
+        from prep_ic.gui.qt import QPointF
         w = self.win
         w.measure_btn.setChecked(True)
         v = w.view
@@ -448,7 +448,7 @@ class ChipGui(unittest.TestCase):
         self.assertIn("No LEF found", w.warn.text())
 
     def test_measure_tape(self):
-        from chip_planner.gui.qt import QPointF
+        from prep_ic.gui.qt import QPointF
         w = self.win
         w.measure_btn.setChecked(True)
         n = len(w.scene.items())
@@ -463,7 +463,7 @@ class ChipGui(unittest.TestCase):
 
     def test_theme_switch(self):
         import json
-        from chip_planner.gui.qt import QColor
+        from prep_ic.gui.qt import QColor
         main_window.VIEW_SETTINGS = Path(self.tmp.name) / "view.json"
         w = self.win
         w.editors["L"].set_text("A")
@@ -484,7 +484,7 @@ class ChipGui(unittest.TestCase):
     def test_measure_tape_repaint_area_covers_the_band(self):
         # Qt repaints an item only inside its bounding rect; with cosmetic pens (width in pixels)
         # that rect is computed in µm, too small when zoomed out: moving the tape left traces
-        from chip_planner.gui.qt import QPointF
+        from prep_ic.gui.qt import QPointF
         w = self.win
         w.resize(1200, 800)
         w.show()
@@ -504,10 +504,10 @@ class ChipGui(unittest.TestCase):
                 self.assertGreaterEqual(it.boundingRect().height() + 1e-6, drawn)
 
     def test_domain_bands_labelled(self):
-        import chip_planner as cp
-        from chip_planner.gui.qt import QGraphicsSimpleTextItem
+        import prep_ic as prep
+        from prep_ic.gui.qt import QGraphicsSimpleTextItem
         w = self.win
-        w.set_project(cp.load(ROOT / "examples" / "chip_demo.json"))
+        w.set_project(prep.load(ROOT / "examples" / "chip_demo.json"))
 
         def texts():
             return [it.text() for it in w.scene.items() if isinstance(it, QGraphicsSimpleTextItem) and it.isVisible()]
