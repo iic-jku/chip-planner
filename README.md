@@ -10,6 +10,7 @@
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?logo=python&logoColor=white)
 ![GUI: PySide6-Essentials](https://img.shields.io/badge/GUI-PySide6--Essentials-41CD52.svg?logo=qt&logoColor=white)
 [![PyPI](https://img.shields.io/pypi/v/prep-ic.svg)](https://pypi.org/project/prep-ic/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23963620.svg)](https://doi.org/10.5281/zenodo.23963620)
 
 (c) 2026 Maximilian Golser and Simon Dorrer
 
@@ -114,7 +115,7 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 ├─ pyproject.toml                packaging, dependency and the prep-ic entry point
 ├─ README.md
 ├─ REUSE.toml                    licensing of files that cannot carry an SPDX header
-└─ ToDo.md                       planned work: sky130A and gf180mcuD, release
+└─ ToDo.md                       planned work: sky130A and gf180mcuD
 ```
 
 
@@ -355,7 +356,8 @@ A further PDK is one more JSON file in `src/prep_ic/data/pdks/`, a further packa
   month = nov,
   year = {2026},
   title = {{GitHub Repository of PREP-IC: Pinout, Ring and Early floorplan Planner for ICs}},
-  url = {https://github.com/iic-jku/prep-ic}
+  url = {https://github.com/iic-jku/prep-ic},
+  doi = {10.5281/zenodo.23963620}
 }
 ```
 
