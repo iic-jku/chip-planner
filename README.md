@@ -5,6 +5,8 @@
 # PREP-IC: Pinout, Ring and Early floorplan Planner for ICs
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/iic-jku/prep-ic/blob/main/LICENSE)
+[![License Check](https://github.com/iic-jku/prep-ic/actions/workflows/license-check.yml/badge.svg)](https://github.com/iic-jku/prep-ic/actions/workflows/license-check.yml)
+[![Tests](https://github.com/iic-jku/prep-ic/actions/workflows/tests.yml/badge.svg)](https://github.com/iic-jku/prep-ic/actions/workflows/tests.yml)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?logo=python&logoColor=white)
 ![GUI: PySide6-Essentials](https://img.shields.io/badge/GUI-PySide6--Essentials-41CD52.svg?logo=qt&logoColor=white)
 
@@ -101,6 +103,9 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 │  └─ test_qt_essentials.py      guards the PySide6-Essentials-only dependency
 ├─ 📁 LICENSES/                  license texts the REUSE check resolves against
 │  └─ Apache-2.0.txt
+├─ 📁 .github/workflows/         CI
+│  ├─ license-check.yml          reuse lint: every file carries copyright and license
+│  └─ tests.yml                  the unittest suite on Linux, Windows and macOS, Python 3.10 and 3.15
 ├─ CITATION.cff
 ├─ LICENSE                       Apache-2.0
 ├─ MANIFEST.in                   sdist manifest (adds the REUSE files)
