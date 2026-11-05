@@ -449,7 +449,7 @@ def bondplan_yaml(layout, source=""):
             item = f'"{names.label[p.no]}"'
             out.append(f"  {key:<4} {item:<24}  # die pin {p.no} {p.name}")
         else:
-            out.append(f'  {key:<4} {chr(34) + "~" + chr(34):<24}  # not bonded')
+            out.append(f"  {key:<4} {'~':<24}  # not bonded")
     return "\n".join(out) + "\n"
 
 
