@@ -320,9 +320,11 @@ The PDK profiles are taken from the IO cell LEF and the LibreLane IO config of t
 | Corner cell | 180 × 180 µm | 180 × 180 µm |
 | Bondpad | 70 × 70 µm | 70 × 70 µm |
 | Seal ring spacing | 140 µm | 140 µm |
-| Default pad pitch | 100 µm | 100 µm |
+| Minimum pad pitch (IO cell width) | 80 µm | 80 µm |
 | Core margin (core power ring) | 45 µm | 45 µm |
 | Power split gap and filler | 10 µm, `sg13g2_Filler2000` | 10 µm, `sg13cmos5l_Filler2000` |
+
+A new project starts at the minimum pitch. Selecting a PDK in the GUI raises a smaller pitch to 100 µm.
 
 The IO function of a pad selects its cell (`<lib>` is `sg13g2` or `sg13cmos5l`):
 
