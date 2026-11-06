@@ -109,9 +109,12 @@ def parse_line(line):
             "pitch": pitch, "group": group, "function": function, "drive": drive, "lock": lock}
 
 
-def has_unknown_tag(name):
-    """A bracket left in a parsed pad name is a tag :func:`parse_line` did not know. A final ``[3]`` is a bus index."""
-    return bool(re.search(r"[\[\]]", BUS_INDEX_RE.sub("", name)))
+def has_unknown_option(name):
+    """A bracket, brace or ``@`` left in a parsed pad name is a tag or option :func:`parse_line` did not read.
+
+    A final ``[3]`` is a bus index.
+    """
+    return bool(re.search(r"[\[\]{}@]", BUS_INDEX_RE.sub("", name)))
 
 
 def format_entry(e):

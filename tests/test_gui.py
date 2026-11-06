@@ -389,7 +389,7 @@ class ChipGui(unittest.TestCase):
         self.assertIn("1 flyline crossing: VIN_P/VIN_N", w.warn.text())
         w.editors["L"].set_text("A [foo]")
         w.render()
-        self.assertIn("Unknown tag in pad name: A [foo]", w.warn.text())
+        self.assertIn("Unknown tag or option in pad name: A [foo]", w.warn.text())
 
 
     def test_undo_add_missing_pads(self):

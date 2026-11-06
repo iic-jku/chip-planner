@@ -196,7 +196,7 @@ One line per entry. Each side lists its pads as seen on the die: top and bottom 
 | `NAME [lock]` | locked pad: it can no longer be dragged and *Optimize Pad Order* leaves it in place |
 | `=== NAME` | power split: cuts the IO ring here and starts power domain `NAME` |
 
-Options combine: `RFOUT [gsg] {70x70} @125`, `DOUT[3] [out] [4mA]`. An unknown tag stays in the pad name together with the tags left of it, so `A [in] [foo]` is a pad named `A [in] [foo]`. The warning line and `prep-ic check` report it.
+Options combine: `RFOUT [gsg] {70x70} @125`, `DOUT[3] [out] [4mA]`. An unknown tag or a malformed option stays in the pad name together with the options left of it, so `A [in] [foo]` is a pad named `A [in] [foo]` and `A {60x}` a pad named `A {60x}`. The warning line and `prep-ic check` report it.
 
 ### PDK, package and LibreLane
 
@@ -305,7 +305,7 @@ The GUI tests run offscreen and are skipped when Qt is not installed.
 | `prep-ic export chip.json --librelane DIR` | write the LibreLane files into `DIR` (needs a PDK in the project) |
 | `prep-ic check chip.json` | list the findings of the project |
 
-The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and all findings go to stderr. Exit code 0 from `export` says only that the files were written, so gate a script on `check`: it prints one finding per line or `no findings`, and exits 0 when clean, 1 with findings and 2 when the check did not run. A finding is a layout warning, a macro LEF that is gone, a marked pin no longer in the LEF, an unknown tag, or what `prep.analyse` reports: crossings, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks. Both commands run without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
+The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and all findings go to stderr. Exit code 0 from `export` says only that the files were written, so gate a script on `check`: it prints one finding per line or `no findings`, and exits 0 when clean, 1 with findings and 2 when the check did not run. A finding is a layout warning, a macro LEF that is gone, a marked pin no longer in the LEF, an unknown tag or option, or what `prep.analyse` reports: crossings, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks. Both commands run without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
 
 
 ## Supported PDKs and Packages
