@@ -1,7 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Maximilian Golser and Simon Dorrer
 # SPDX-License-Identifier: Apache-2.0
 import re
+import tempfile
 import unittest
+from pathlib import Path
 
 from tests import ROOT  # noqa: F401  (sets the import path)
 
@@ -180,6 +182,45 @@ class MacroExport(unittest.TestCase):
         self.assertIn(f"      i_chip_core.adc0:\n        location: [{x0 + 40:g}, {lay.die_height - (y0 + 20 + 420):g}]\n"
                       "        orientation: E\n", text)
         self.assertIn("# placeholder dig (no LEF) not exported", text)
+        for view in ("vh:", "nl:", "pnl:", "lib:", "spef:"):  # the fixture holds a LEF only
+            self.assertNotIn(f"    {view}", text)
+        self.assertIn("    # no vh, pnl or nl in final/, so lint stops with MODMISSING\n", text)
+
+    def run_dir_yaml(self, views):
+        """macros.yaml of a macro ``m`` in a run directory that holds these files below ``final/``."""
+        from prep_ic.formats.librelane import macros_yaml
+        from prep_ic.model.floorplan import Macro, MacroDef
+        with tempfile.TemporaryDirectory() as d:
+            for view in views:
+                path = Path(d, "m", "final", view)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
+            p = compac_like()
+            p.floorplan.macros = [Macro("m0", "m", str(Path(d, "m")), 40.0, 20.0, 0, [], MacroDef("m", 100.0, 100.0))]
+            return macros_yaml(p, p.layout(), out_dir=d)
+
+    def test_macros_yaml_exports_the_views_of_a_run_directory(self):
+        text = self.run_dir_yaml(["vh/m.vh", "nl/m.nl.v", "pnl/m.pnl.v", "lib/nom_slow/m__nom_slow.lib",
+                                  "lib/nom_fast/m__nom_fast.lib", "spef/nom/m.nom.spef", "spef/max/m.max.spef"])
+        self.assertIn("    lef: [dir::m/final/lef/m.lef]\n"
+                      "    vh: [dir::m/final/vh/m.vh]\n"
+                      "    nl: [dir::m/final/nl/m.nl.v]\n"
+                      "    pnl: [dir::m/final/pnl/m.pnl.v]\n"
+                      "    lib:\n"
+                      "      nom_fast: [dir::m/final/lib/nom_fast/m__nom_fast.lib]\n"
+                      "      nom_slow: [dir::m/final/lib/nom_slow/m__nom_slow.lib]\n"
+                      "    spef:\n"
+                      "      max_*: [dir::m/final/spef/max/m.max.spef]\n"
+                      "      nom_*: [dir::m/final/spef/nom/m.nom.spef]\n"
+                      "    instances:\n", text)
+        self.assertNotIn("MODMISSING", text)
+
+    def test_macros_yaml_lists_only_views_that_exist(self):
+        text = self.run_dir_yaml(["pnl/m.pnl.v", "lib/nom_fast/other.lib", "spef/nom/other.spef"])
+        self.assertIn("    pnl: [dir::m/final/pnl/m.pnl.v]\n", text)
+        for view in ("vh:", "nl:", "lib:", "spef:"):
+            self.assertNotIn(f"    {view}", text)
+        self.assertNotIn("MODMISSING", text)  # lint takes the pnl
 
     def test_macros_yaml_keeps_three_decimals(self):
         from prep_ic.formats.librelane import _num

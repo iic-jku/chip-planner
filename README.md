@@ -209,7 +209,7 @@ In *Settings → Technology* choose a PDK (IHP SG13G2 or SG13CMOS5L) and optiona
   - `pad_cfg.tcl`: places the IO cells exactly as planned (LibreLane's default script spreads them evenly) and keeps the split gaps free,
   - `chip_top.sv`: the IO cell instances with the same names, the top-level `*_PAD` ports and the `chip_core` instance,
   - `chip_core_template.sv`: the matching core ports, and with macros the instances to create in the core,
-  - `macros.yaml` (with macros): `MACROS` with LEF and GDS and the instance locations (`i_chip_core.<instance>`),
+  - `macros.yaml` (with macros): `MACROS` with LEF and GDS, the `vh`, `nl`, `pnl`, `lib` and `spef` views found in the run directory, and the instance locations (`i_chip_core.<instance>`),
   - `bondplan_pinout.yaml` (with a package): `PACKAGE_NAME` and `PINOUT` for the bondplan config.
 - The design must still provide the bondpad cell (`PAD_BONDPAD_NAME`, e.g. `sg13g2_ip__bondpad_70x70` with `EXTRA_LEFS` and `EXTRA_GDS`), as in any IHP chip.
 
