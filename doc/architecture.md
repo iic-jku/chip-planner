@@ -33,7 +33,7 @@ A fixed die wins when both fixed modes are set. *Square* makes both sides the lo
 
 ## Core area and macros
 
-There is one core in the picture: the LibreLane `CORE_AREA`, the die minus twice the IO ring depth and the PDK core margin (the room of the core power ring, 0 without a PDK). Macro `x`/`y` are the top-left corner of the placed, rotated box relative to the top-left of that area, so the `macros.yaml` export is a plain offset.
+There is one core in the picture: the LibreLane `CORE_AREA`, the die minus twice the IO ring depth and the PDK core margin (the room of the core power ring, 0 without a PDK). Macro `x`/`y` are the top-left corner of the placed, rotated box relative to the top-left of that area, so the `macros.yaml` export offsets x by that corner and flips y to LibreLane's lower-left origin.
 
 - **Size and pins are never typed for a macro with a LEF.** A macro is a LibreLane run directory. `find_lef` reads `final/lef/<dirname>_top.lef`, else the only `*.lef` in `final/lef/`. In a LEF with several macros, `pick_macro` takes `<dirname>_top`, else the first.
 - **The LEF is read again** when the project opens and on *Reload Macros*. The project keeps the last values as a cache, so a macro whose LEF cannot be read keeps them and a warning names it. A marked pin that is no longer in the LEF stays marked, is skipped and is reported.
@@ -86,4 +86,4 @@ The window keeps a stack of project snapshots. A step ends after every chip view
 
 ## LibreLane export
 
-`formats/librelane.py` writes the files listed in the README from the same `Layout`, so names match across them (`tests/test_pdk.py` compares them). `pad_cfg.tcl` places each IO cell at its planned position, where LibreLane's default script would spread them evenly. `macros.yaml` lists per macro its GDS and LEF (`dir::` paths relative to the export directory) and the instances `i_chip_core.<instance>` with their lower-left location and orientation. `chip_core_template.sv` lists the macro instances to create in the core under the same names.
+`formats/librelane.py` writes the files listed in the README from the same `Layout`, so names match across them (`tests/test_pdk.py` compares them). `pad_cfg.tcl` places each IO cell at its planned position, where LibreLane's default script would spread them evenly. `macros.yaml` lists per macro its GDS, LEF and other views (`dir::` paths relative to the export directory, absolute in the GUI's preview and across drives) and the instances `i_chip_core.<instance>` with their lower-left location and orientation. `chip_core_template.sv` lists the macro instances to create in the core under the same names.
