@@ -305,7 +305,7 @@ The GUI tests run offscreen and are skipped when Qt is not installed.
 | `prep-ic export chip.json --librelane DIR` | write the LibreLane files into `DIR` (needs a PDK in the project) |
 | `prep-ic check chip.json` | list the findings of the project |
 
-The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and all findings go to stderr. Exit code 0 from `export` says only that the files were written, so gate a script on `check`: it prints one finding per line or `no findings`, and exits 0 when clean, 1 with findings and 2 when the check did not run. A finding is a layout warning, a macro LEF that is gone, a marked pin no longer in the LEF, an unknown tag or option, or what `prep.analyse` reports: crossings, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks. Both commands run without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
+The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and all findings go to stderr. Exit code 0 from `export` says only that the files were written, so gate a script on `check`: it prints one finding per line or `no findings`, and exits 0 when clean, 1 with findings and 2 when the check did not run. A finding is a layout warning, a macro LEF that is gone, a marked pin no longer in the LEF, or what `prep.analyse` reports: unknown tags and options, bad power domain names, crossings, long analog flylines, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks. Both commands run without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
 
 
 ## Supported PDKs and Packages
@@ -324,7 +324,7 @@ The PDK profiles are taken from the IO cell LEF and the LibreLane IO config of t
 | Core margin (core power ring) | 45 µm | 45 µm |
 | Power split gap and filler | 10 µm, `sg13g2_Filler2000` | 10 µm, `sg13cmos5l_Filler2000` |
 
-A new project starts at the minimum pitch. Selecting a PDK in the GUI raises a smaller pitch to 100 µm.
+A new project starts standard pads at the minimum pitch and RF pads at 100 µm. Selecting a PDK in the GUI raises a smaller pitch to 100 µm.
 
 The IO function of a pad selects its cell (`<lib>` is `sg13g2` or `sg13cmos5l`):
 

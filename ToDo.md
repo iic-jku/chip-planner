@@ -10,6 +10,20 @@ Planned work on PREP-IC. Each item names the files it touches. Remove an item in
 - [ ] **Maximilian Golser on PyPI and in `CITATION.cff`.** Only Simon Dorrer's account owns `prep-ic` on PyPI, so add him as a maintainer. `CITATION.cff` and the Zenodo record have no ORCID for him.
 
 
+## Found in the review of 0.1.2
+
+None of these came with 0.1.2 except that `prep-ic check` now makes the first one matter, and none is a design without a choice to make.
+
+- [ ] **`prep-ic check` passes a project file that lost content on load (`model/floorplan.py`, `model/project.py`).** A macro entry that does not parse, such as `"io": null`, and a side key other than `T`, `R`, `B` and `L` are dropped without a finding, so a hand-edited file can exit 0 with `no findings`. Report what was dropped in `load_warnings`.
+- [ ] **One macro name from two paths in `macros.yaml` (`formats/librelane.py`, `macros_yaml`).** Instances group by name and path while `MACROS` is keyed by name, so two run directories of one module, or one directory spelled two ways in a hand-edited file, write a duplicate key that LibreLane's loader rejects. Group by resolved path and report a real conflict.
+- [ ] **Hand-made `final/` layouts in `macros.yaml` (`formats/librelane.py`, `_macro_views`).** Only LibreLane's layout is read. Of 64 macro directories in the group's chip repos, 30 have a flat `final/lib/<name>.lib`, which names no corner for a key, and 6 have `final/vh/<name>.v`. The chip templates list such a lib by hand as `lib: {"*": [...]}` for some macros and leave it out for others. Decide whether to export them or to name them in a comment.
+- [ ] **`lef:` in `macros.yaml` names `<macro>.lef`, not the file that was read (`formats/librelane.py`, `model/floorplan.py`).** `find_lef` accepts the only `*.lef` of `final/lef/`, so a LEF named otherwise than its macro exports a path that does not exist. None of the 64 directories has this.
+- [ ] **Bad option values pass the check (`model/parse.py`, `model/layout.py`).** `A {0x0}` becomes a 1 × 1 µm pad, `A [0mA]` loses its drive, and a pitch of `1e999` in a project file gives an infinite die with `no findings`.
+- [ ] **A marked pin that became `USE POWER` in the LEF loses its flyline without a finding (`model/floorplan.py`).**
+- [ ] **`findings()` keeps load warnings after a reload (`model/chip.py`).** A script that calls `project.floorplan.reload()` has to set `project.load_warnings` itself, as the GUI does, or stale `No LEF found` lines stay.
+- [ ] **"Qt is missing" hides the real import error (`gui/qt.py`).** A PySide6 that is installed but cannot load, for lack of `libEGL.so.1` for example, gets the advice to install it, and the cause is lost.
+
+
 ## Other repos
 
 - [ ] **snp2le has the same PySide6 dependency (`pyproject.toml`).** It declares `PySide6-Essentials>=6.6` and Python 3.10 with no limit for Linux. Four of its GUI test files (25 tests) pass on Linux with Python 3.10 and PySide6 6.12.0, and it calls neither of the two `QFont` setters measured here, but other calls and a long session were not measured.
