@@ -151,7 +151,8 @@ class LibreLaneOutput(unittest.TestCase):
         self.assertIn("PACKAGE_NAME: OP_QFN32_A4_FIT", text)
         self.assertRegex(text, r'\n  1:\s+"clk_PAD"')
         self.assertRegex(text, r'\n  4:\s+"IOVDD"')
-        self.assertRegex(text, r'\n  25:\s+"~"')
+        self.assertRegex(text, r'\n  25:\s+~\s+# not bonded')
+        self.assertNotIn('"~"', text)  # the string "~" would be taken for a pad name
 
 
 class MacroExport(unittest.TestCase):
