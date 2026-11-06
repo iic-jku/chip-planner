@@ -78,13 +78,15 @@ class AnalyseTests(unittest.TestCase):
         self.assertEqual(c.crossings, 3)
         self.assertIn("3 flyline crossings: VIN_P/VIN_N, VIN_P/CLK, VIN_N/CLK", c.warnings)
 
-    def test_unknown_tags(self):
-        for line in ("A [foo]", "A [in] [foo]", "D [foo-bar]", "A [in", "A]", "A[3] [foo]"):
-            self.assertIn(f"Unknown tag in pad name: {line}", analyse(set_lines(chip(), "L", [line])).warnings)
+    def test_unknown_tags_and_options(self):
+        for line in ("A [foo]", "A [in] [foo]", "D [foo-bar]", "A [in", "A]", "A[3] [foo]",
+                     "A {60x}", "A 60x60}", "{60x60}", "A @x", "@120"):
+            self.assertIn(f"Unknown tag or option in pad name: {line}",
+                          analyse(set_lines(chip(), "L", [line])).warnings)
 
-    def test_valid_lines_are_no_unknown_tags(self):
+    def test_valid_lines_are_not_flagged(self):
         for line in ("A", "A[3]", "A [3]", "DOUT[3] [out] [4mA]", "RFOUT [gsg] {70x70} @125", "B [lock]", "---", "NC",
-                     "=== ANA", ""):
+                     "=== ANA", "", "A {60x60}", "A{60x60}", "A @120", "A@120"):
             warnings = analyse(set_lines(chip(), "L", [line])).warnings
             self.assertFalse(any("Unknown tag" in w for w in warnings), line)
 

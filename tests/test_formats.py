@@ -118,7 +118,7 @@ class CommandLine(unittest.TestCase):
             prep.save(prep.Project(sides={"L": ["Ä [foo]"], "T": [], "R": [], "B": []}), path)
             r = self.run_cli("check", str(path), PYTHONIOENCODING="ascii")
         self.assertEqual(r.returncode, 1, r.stderr)
-        self.assertIn("Unknown tag in pad name: \\xc4 [foo]", r.stdout)
+        self.assertIn("Unknown tag or option in pad name: \\xc4 [foo]", r.stdout)
 
 
 class NoQtOutsideGui(unittest.TestCase):

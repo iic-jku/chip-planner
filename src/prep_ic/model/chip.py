@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .constants import SIDES
 from .floorplan import _function, _overlap, core_area, floorplan_warnings, nearest_side
-from .parse import has_unknown_tag, parse_line
+from .parse import has_unknown_option, parse_line
 
 Point = Tuple[float, float]
 
@@ -231,8 +231,8 @@ def analyse(project, layout=None) -> ChipCheck:
     for s in SIDES:
         lines = project.physical_lines(s)
         entries = [parse_line(l) for l in lines]
-        out.warnings += [f"Unknown tag in pad name: {e['name']}" for e in entries
-                         if e and not e["split"] and has_unknown_tag(e["name"])]
+        out.warnings += [f"Unknown tag or option in pad name: {e['name']}" for e in entries
+                         if e and not e["split"] and has_unknown_option(e["name"])]
         single = {e["name"]: i for i, e in enumerate(entries) if e and not e["split"] and not e["group"]}
         for n, i in single.items():
             q = diff_partner(n)
