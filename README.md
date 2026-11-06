@@ -209,7 +209,7 @@ In *Settings → Technology* choose a PDK (IHP SG13G2 or SG13CMOS5L) and optiona
   - `pad_cfg.tcl`: places the IO cells exactly as planned (LibreLane's default script spreads them evenly) and keeps the split gaps free,
   - `chip_top.sv`: the IO cell instances with the same names, the top-level `*_PAD` ports and the `chip_core` instance,
   - `chip_core_template.sv`: the matching core ports, and with macros the instances to create in the core,
-  - `macros.yaml` (with macros): `MACROS` with LEF and GDS, the `vh`, `nl`, `pnl`, `lib` and `spef` views found in the run directory, and the instance locations (`i_chip_core.<instance>`),
+  - `macros.yaml` (with macros): `MACROS` with LEF and GDS, the `vh`, `nl`, `pnl`, `lib` and `spef` views found in LibreLane's layout below `final/`, and the instance locations (`i_chip_core.<instance>`),
   - `bondplan_pinout.yaml` (with a package): `PACKAGE_NAME` and `PINOUT` for the bondplan config.
 - The design must still provide the bondpad cell (`PAD_BONDPAD_NAME`, e.g. `sg13g2_ip__bondpad_70x70` with `EXTRA_LEFS` and `EXTRA_GDS`), as in any IHP chip.
 
@@ -305,7 +305,7 @@ The GUI tests run offscreen and are skipped when Qt is not installed.
 | `prep-ic export chip.json --librelane DIR` | write the LibreLane files into `DIR` (needs a PDK in the project) |
 | `prep-ic check chip.json` | list the findings of the project |
 
-The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and all findings go to stderr. Exit code 0 from `export` says only that the files were written, so gate a script on `check`: it prints one finding per line or `no findings`, and exits 0 when clean, 1 with findings and 2 when the check did not run. A finding is a layout warning, a macro LEF that is gone, a marked pin no longer in the LEF, an unknown tag or option, or what `prep.analyse` reports: crossings, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks. Both commands run without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
+The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and all findings go to stderr. Exit code 0 from `export` says only that the files were written, so gate a script on `check`: it prints one finding per line or `no findings`, and exits 0 when clean, 1 with findings and 2 when the check did not run. A finding is a layout warning, a macro LEF that is gone, a marked pin no longer in the LEF, or what `prep.analyse` reports: unknown tags and options, bad power domain names, crossings, long analog flylines, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks. Both commands run without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
 
 
 ## Supported PDKs and Packages
@@ -320,9 +320,11 @@ The PDK profiles are taken from the IO cell LEF and the LibreLane IO config of t
 | Corner cell | 180 × 180 µm | 180 × 180 µm |
 | Bondpad | 70 × 70 µm | 70 × 70 µm |
 | Seal ring spacing | 140 µm | 140 µm |
-| Default pad pitch | 100 µm | 100 µm |
+| Minimum pad pitch (IO cell width) | 80 µm | 80 µm |
 | Core margin (core power ring) | 45 µm | 45 µm |
 | Power split gap and filler | 10 µm, `sg13g2_Filler2000` | 10 µm, `sg13cmos5l_Filler2000` |
+
+A new project starts standard pads at the minimum pitch and RF pads at 100 µm. Selecting a PDK in the GUI raises a pitch below the minimum to 100 µm.
 
 The IO function of a pad selects its cell (`<lib>` is `sg13g2` or `sg13cmos5l`):
 

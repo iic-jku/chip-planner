@@ -177,47 +177,85 @@ class MacroExport(unittest.TestCase):
         x0, y0, _, _ = core_area(lay)
         text = macros_yaml(p, lay, out_dir=ROOT / "flow")
         self.assertIn("MACROS:\n  adc_sar_top:\n", text)
-        self.assertIn("    gds: [dir::../tests/data/macros/adc_sar/final/gds/adc_sar_top.gds]\n", text)
-        self.assertIn("    lef: [dir::../tests/data/macros/adc_sar/final/lef/adc_sar_top.lef]\n", text)
+        self.assertIn('    gds: ["dir::../tests/data/macros/adc_sar/final/gds/adc_sar_top.gds"]\n', text)
+        self.assertIn('    lef: ["dir::../tests/data/macros/adc_sar/final/lef/adc_sar_top.lef"]\n', text)
         self.assertIn(f"      i_chip_core.adc0:\n        location: [{x0 + 40:g}, {lay.die_height - (y0 + 20 + 420):g}]\n"
                       "        orientation: E\n", text)
         self.assertIn("# placeholder dig (no LEF) not exported", text)
         for view in ("vh:", "nl:", "pnl:", "lib:", "spef:"):  # the fixture holds a LEF only
             self.assertNotIn(f"    {view}", text)
-        self.assertIn("    # no vh, pnl or nl in final/, so lint stops with MODMISSING\n", text)
+        self.assertIn("    # no vh, pnl or nl in LibreLane's layout below final/, so lint stops with MODMISSING\n", text)
 
-    def run_dir_yaml(self, views):
-        """macros.yaml of a macro ``m`` in a run directory that holds these files below ``final/``."""
+    def test_macros_yaml_paths_without_out_dir_are_absolute(self):
+        from prep_ic.formats.librelane import macros_yaml
+        p = self.project()
+        d = (ROOT / "tests" / "data" / "macros" / "adc_sar").resolve().as_posix()
+        for text in (macros_yaml(p, p.layout()), librelane_files(p)["macros.yaml"]):  # the GUI's preview
+            self.assertIn(f'    gds: ["{d}/final/gds/adc_sar_top.gds"]\n', text)
+            self.assertNotIn("dir::", text)
+        p.floorplan.macros[0].path = "some/relative/dir"  # as a script can set it
+        self.assertIn(f'    gds: ["{Path.cwd().resolve().as_posix()}/some/relative/dir/final/gds/adc_sar_top.gds"]\n',
+                      macros_yaml(p, p.layout()))
+
+    def test_macros_yaml_paths_on_another_drive_are_absolute(self):
+        from unittest import mock
+        from prep_ic.formats.librelane import macros_yaml
+        p = self.project()
+        with mock.patch("prep_ic.formats.librelane.os.path.relpath", side_effect=ValueError("other drive")):
+            text = macros_yaml(p, p.layout(), out_dir=ROOT / "flow")
+        self.assertIn("/tests/data/macros/adc_sar/final/gds/adc_sar_top.gds", text)
+        self.assertNotIn("dir::", text)
+
+    def run_dir_yaml(self, views, directory="m", instances=("m0",)):
+        """macros.yaml of a macro ``m`` in a run directory that holds these files below ``final/``, or folders for ``x/``."""
         from prep_ic.formats.librelane import macros_yaml
         from prep_ic.model.floorplan import Macro, MacroDef
         with tempfile.TemporaryDirectory() as d:
             for view in views:
-                path = Path(d, "m", "final", view)
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.touch()
+                path = Path(d, directory, "final", view)
+                if view.endswith("/"):
+                    path.mkdir(parents=True)
+                else:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.touch()
             p = compac_like()
-            p.floorplan.macros = [Macro("m0", "m", str(Path(d, "m")), 40.0, 20.0, 0, [], MacroDef("m", 100.0, 100.0))]
+            p.floorplan.macros = [Macro(i, "m", str(Path(d, directory)), 40.0, 20.0, 0, [], MacroDef("m", 100.0, 100.0))
+                                  for i in instances]
             return macros_yaml(p, p.layout(), out_dir=d)
+
+    def test_macros_yaml_quotes_paths(self):
+        for directory in ("br[ack]et", "cu{r}ly", "com,ma", "ha #sh", "smile😀"):  # none survive a plain YAML scalar
+            text = self.run_dir_yaml(["vh/m.vh", "lib/nom/m__nom.lib"], directory)
+            self.assertIn(f'    gds: ["dir::{directory}/final/gds/m.gds"]\n', text)
+            self.assertIn(f'    vh: ["dir::{directory}/final/vh/m.vh"]\n', text)
+            self.assertIn(f'      nom: ["dir::{directory}/final/lib/nom/m__nom.lib"]\n', text)
+
+    def test_macros_yaml_lists_all_instances_of_a_macro_once(self):
+        text = self.run_dir_yaml(["vh/m.vh"], instances=("m0", "m1"))
+        self.assertEqual(text.count("  m:\n"), 1)
+        self.assertIn("      i_chip_core.m0:\n", text)
+        self.assertIn("      i_chip_core.m1:\n", text)
 
     def test_macros_yaml_exports_the_views_of_a_run_directory(self):
         text = self.run_dir_yaml(["vh/m.vh", "nl/m.nl.v", "pnl/m.pnl.v", "lib/nom_slow/m__nom_slow.lib",
                                   "lib/nom_fast/m__nom_fast.lib", "spef/nom/m.nom.spef", "spef/max/m.max.spef"])
-        self.assertIn("    lef: [dir::m/final/lef/m.lef]\n"
-                      "    vh: [dir::m/final/vh/m.vh]\n"
-                      "    nl: [dir::m/final/nl/m.nl.v]\n"
-                      "    pnl: [dir::m/final/pnl/m.pnl.v]\n"
+        self.assertIn('    lef: ["dir::m/final/lef/m.lef"]\n'
+                      '    vh: ["dir::m/final/vh/m.vh"]\n'
+                      '    nl: ["dir::m/final/nl/m.nl.v"]\n'
+                      '    pnl: ["dir::m/final/pnl/m.pnl.v"]\n'
                       "    lib:\n"
-                      "      nom_fast: [dir::m/final/lib/nom_fast/m__nom_fast.lib]\n"
-                      "      nom_slow: [dir::m/final/lib/nom_slow/m__nom_slow.lib]\n"
+                      '      nom_fast: ["dir::m/final/lib/nom_fast/m__nom_fast.lib"]\n'
+                      '      nom_slow: ["dir::m/final/lib/nom_slow/m__nom_slow.lib"]\n'
                       "    spef:\n"
-                      "      max_*: [dir::m/final/spef/max/m.max.spef]\n"
-                      "      nom_*: [dir::m/final/spef/nom/m.nom.spef]\n"
+                      '      max_*: ["dir::m/final/spef/max/m.max.spef"]\n'
+                      '      nom_*: ["dir::m/final/spef/nom/m.nom.spef"]\n'
                       "    instances:\n", text)
         self.assertNotIn("MODMISSING", text)
 
     def test_macros_yaml_lists_only_views_that_exist(self):
-        text = self.run_dir_yaml(["pnl/m.pnl.v", "lib/nom_fast/other.lib", "spef/nom/other.spef"])
-        self.assertIn("    pnl: [dir::m/final/pnl/m.pnl.v]\n", text)
+        text = self.run_dir_yaml(["pnl/m.pnl.v", "vh/m.vh/", "nl/m.nl.v/", "lib/nom_fast/other.lib",
+                                  "lib/nom_x/m__nom_x.lib/", "spef/nom/other.spef"])
+        self.assertIn('    pnl: ["dir::m/final/pnl/m.pnl.v"]\n', text)
         for view in ("vh:", "nl:", "lib:", "spef:"):
             self.assertNotIn(f"    {view}", text)
         self.assertNotIn("MODMISSING", text)  # lint takes the pnl

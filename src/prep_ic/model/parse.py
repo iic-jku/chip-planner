@@ -58,7 +58,7 @@ SIZE_RE = re.compile(r"\s*\{\s*" + _NUM + r"\s*[x×*]\s*" + _NUM + r"\s*\}\s*$",
 PITCH_RE = re.compile(r"\s*@\s*" + _NUM + r"\s*$")
 TAG_RE = re.compile(r"\s*\[([A-Za-z0-9]+)\]\s*$")
 DRIVE_RE = re.compile(r"(\d+)ma", re.I)
-BUS_INDEX_RE = re.compile(r"\s*\[\d+\]$")
+BUS_INDEX_RE = re.compile(r"\[[0-9]+\]")
 TYPE_TAGS = {"pwr": "p", "gnd": "g", "ana": "a", "rf": "rf", "dig": "d", "clk": "c", "nc": "nc"}
 FUNCTION_TYPES = {"vdd": "pwr", "iovdd": "pwr", "vss": "gnd", "iovss": "gnd", "analog": "ana", "none": "nc"}
 
@@ -112,7 +112,7 @@ def parse_line(line):
 def has_unknown_option(name):
     """A bracket, brace or ``@`` left in a parsed pad name is a tag or option :func:`parse_line` did not read.
 
-    A final ``[3]`` is a bus index.
+    A numeric index belongs to the name, also inside it as in the LEF pins ``D[1][2]`` and ``x[1].y``.
     """
     return bool(re.search(r"[\[\]{}@]", BUS_INDEX_RE.sub("", name)))
 

@@ -10,6 +10,7 @@ original script. ``chip_top.sv`` instantiates the IO cells with the same instanc
 the PAD_* lists, so both always match.
 """
 
+import json
 import os
 import re
 from collections import Counter, OrderedDict
@@ -377,19 +378,18 @@ VERILOG_VIEWS = (("vh", "{}.vh"), ("nl", "{}.nl.v"), ("pnl", "{}.pnl.v"))
 CORNER_VIEWS = (("lib", "{corner}", "{name}__{corner}.lib"), ("spef", "{corner}_*", "{name}.{corner}.spef"))
 
 
-def _macro_views(name, path, d):
-    """``MACROS`` lines of the views found in a run directory, ``d`` being its path as written."""
-    final = Path(path) / "final"
-    out = [f"    {view}: [dir::{d}/final/{view}/{file.format(name)}]" for view, file in VERILOG_VIEWS
+def _macro_views(name, final, path_value):
+    """``MACROS`` lines of the views found below ``final``, ``path_value`` writing a file's path."""
+    out = [f"    {view}: [{path_value(final / view / file.format(name))}]" for view, file in VERILOG_VIEWS
            if (final / view / file.format(name)).is_file()]
     if not out:
-        out.append("    # no vh, pnl or nl in final/, so lint stops with MODMISSING")
+        out.append("    # no vh, pnl or nl in LibreLane's layout below final/, so lint stops with MODMISSING")
     for view, key, file in CORNER_VIEWS:
         corners = sorted(c.name for c in (final / view).glob("*")
                          if (c / file.format(name=name, corner=c.name)).is_file())
         if corners:
             out.append(f"    {view}:")
-            out += [f"      {key.format(corner=c)}: [dir::{d}/final/{view}/{c}/{file.format(name=name, corner=c)}]"
+            out += [f"      {key.format(corner=c)}: [{path_value(final / view / c / file.format(name=name, corner=c))}]"
                     for c in corners]
     return out
 
@@ -404,19 +404,21 @@ def macros_yaml(project, layout, out_dir=None, source=""):
     """``MACROS`` part of the LibreLane config: LEF, GDS and the views found per macro, and the placed instances.
 
     Locations are the lower-left corners of the placed macros in die coordinates (origin
-    lower-left); paths are relative to ``out_dir`` (the directory of the config) when given.
+    lower-left); paths are relative to ``out_dir`` (the directory of the config) when given
+    and on the same drive, else absolute.
     """
     from ..model.floorplan import core_area
     pdk = _require_pdk(layout)
     x0, y0, _, _ = core_area(layout)
 
-    def rel(path):
-        if out_dir is None:
-            return Path(path).as_posix()
-        try:
-            return Path(os.path.relpath(Path(path).resolve(), Path(out_dir).resolve())).as_posix()
-        except ValueError:  # other drive
-            return Path(path).as_posix()
+    def path_value(path):
+        # Quoted, since a directory name may hold [ , or #. dir:: would prefix an absolute path.
+        if out_dir is not None:
+            try:
+                return json.dumps("dir::" + Path(os.path.relpath(path, Path(out_dir).resolve())).as_posix(), ensure_ascii=False)
+            except ValueError:  # other drive
+                pass
+        return json.dumps(Path(path).as_posix(), ensure_ascii=False)
 
     out = _header("#", layout, pdk, source)
     out += ["# Macro placement for the LibreLane config.yaml (flow: Chip). The macros are",
@@ -427,9 +429,10 @@ def macros_yaml(project, layout, out_dir=None, source=""):
             continue
         groups.setdefault((m.macro, m.path), []).append(m)
     for (name, path), ms in groups.items():
-        d = rel(path)
-        out += [f"  {name}:", f"    gds: [dir::{d}/final/gds/{name}.gds]", f"    lef: [dir::{d}/final/lef/{name}.lef]"]
-        out += _macro_views(name, path, d)
+        final = Path(path).resolve() / "final"
+        out += [f"  {name}:", f"    gds: [{path_value(final / 'gds' / f'{name}.gds')}]",
+                f"    lef: [{path_value(final / 'lef' / f'{name}.lef')}]"]
+        out += _macro_views(name, final, path_value)
         out.append("    instances:")
         for m in ms:
             w, h = m.size()

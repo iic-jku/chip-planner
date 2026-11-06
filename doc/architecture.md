@@ -33,7 +33,7 @@ A fixed die wins when both fixed modes are set. *Square* makes both sides the lo
 
 ## Core area and macros
 
-There is one core in the picture: the LibreLane `CORE_AREA`, the die minus twice the IO ring depth and the PDK core margin (the room of the core power ring, 0 without a PDK). Macro `x`/`y` are the top-left corner of the placed, rotated box relative to the top-left of that area, so the `macros.yaml` export is a plain offset.
+There is one core in the picture: the LibreLane `CORE_AREA`, the die minus twice the IO ring depth and the PDK core margin (the room of the core power ring, 0 without a PDK). Macro `x`/`y` are the top-left corner of the placed, rotated box relative to the top-left of that area, so the `macros.yaml` export offsets x by that corner and flips y to LibreLane's lower-left origin.
 
 - **Size and pins are never typed for a macro with a LEF.** A macro is a LibreLane run directory. `find_lef` reads `final/lef/<dirname>_top.lef`, else the only `*.lef` in `final/lef/`. In a LEF with several macros, `pick_macro` takes `<dirname>_top`, else the first.
 - **The LEF is read again** when the project opens and on *Reload Macros*. The project keeps the last values as a cache, so a macro whose LEF cannot be read keeps them and a warning names it. A marked pin that is no longer in the LEF stays marked, is skipped and is reported.
@@ -68,7 +68,7 @@ Per side, the connected unlocked pads keep the set of slots they occupy and are 
 - **Differential pairs** are single-pad lines on one side whose names differ only in a final `P`/`N` (`VIN_P`/`VIN_N`, `INP`/`INN`). They must be adjacent.
 - **Flyline length.** Flylines of sensitive pads longer than *Max analog/RF flyline* (900 µm) are reported. The stat tile shows the longest.
 - **Crossings.** Two flylines that cross are a warning that names their pads, next to the count in the stat tile.
-- **Unknown tags and options.** A bracket, a brace or an `@` left in a pad name, other than a final bus index like `[3]`, is a tag or option the parser did not read. The parser stops at it, so the options left of it stay in the name too.
+- **Unknown tags and options.** A bracket, a brace or an `@` left in a pad name, other than a numeric index like the two in `D[1][2]`, is a tag or option the parser did not read. The parser stops at it, so the options left of it stay in the name too. A power domain name takes letters, digits and `_` only, since it ends up in net names.
 - **Macros.** Overlaps, macros outside the core, halos that overlap (the gap between two macro boxes is smaller than the sum of their halos, 20 µm by default per macro) and sensitive and noisy macros closer than *Spacing* (100 µm).
 - **Supplies.** Every macro needs a pad with function `vdd` and one with `vss` of its domain whose inner edge point is within *Max supply distance* (1000 µm) of the macro center. Supplies match by function, not by name, and IO supplies do not count. Without splits every pad is in the one domain.
 - **Suggest Supply Pads** adds one pad at a time, next to the pad of the domain that is closest to the macro, on the macro's side of it. The pad is named after the macro's LEF power pin, else `VDD`/`VSS` (`VDD_<DOMAIN>` with splits), and gets an explicit `[vdd]`/`[vss]` tag. It repeats until no macro misses a supply, since one new pad can serve several macros, and tries each macro and kind once.
@@ -86,4 +86,4 @@ The window keeps a stack of project snapshots. A step ends after every chip view
 
 ## LibreLane export
 
-`formats/librelane.py` writes the files listed in the README from the same `Layout`, so names match across them (`tests/test_pdk.py` compares them). `pad_cfg.tcl` places each IO cell at its planned position, where LibreLane's default script would spread them evenly. `macros.yaml` lists per macro its GDS and LEF (`dir::` paths relative to the export directory) and the instances `i_chip_core.<instance>` with their lower-left location and orientation. `chip_core_template.sv` lists the macro instances to create in the core under the same names.
+`formats/librelane.py` writes the files listed in the README from the same `Layout`, so names match across them (`tests/test_pdk.py` compares them). `pad_cfg.tcl` places each IO cell at its planned position, where LibreLane's default script would spread them evenly. `macros.yaml` lists per macro its GDS, LEF and other views (`dir::` paths relative to the export directory, absolute in the GUI's preview and across drives) and the instances `i_chip_core.<instance>` with their lower-left location and orientation. `chip_core_template.sv` lists the macro instances to create in the core under the same names.

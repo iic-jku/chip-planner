@@ -233,6 +233,8 @@ def analyse(project, layout=None) -> ChipCheck:
         entries = [parse_line(l) for l in lines]
         out.warnings += [f"Unknown tag or option in pad name: {e['name']}" for e in entries
                          if e and not e["split"] and has_unknown_option(e["name"])]
+        out.warnings += [f"Power domain name with invalid characters: {e['domain']}" for e in entries
+                         if e and e["split"] and not re.fullmatch(r"[A-Za-z0-9_]*", e["domain"])]
         single = {e["name"]: i for i, e in enumerate(entries) if e and not e["split"] and not e["group"]}
         for n, i in single.items():
             q = diff_partner(n)

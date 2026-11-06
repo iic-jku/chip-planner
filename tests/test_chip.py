@@ -79,16 +79,25 @@ class AnalyseTests(unittest.TestCase):
         self.assertIn("3 flyline crossings: VIN_P/VIN_N, VIN_P/CLK, VIN_N/CLK", c.warnings)
 
     def test_unknown_tags_and_options(self):
-        for line in ("A [foo]", "A [in] [foo]", "D [foo-bar]", "A [in", "A]", "A[3] [foo]",
-                     "A {60x}", "A 60x60}", "{60x60}", "A @x", "@120"):
+        for line in ("A [foo]", "A [in] [foo]", "D [foo-bar]", "A [in", "A]", "A[3] [foo]", "A[]", "A[x]", "A[１]",
+                     "A {60x}", "A {60x", "A 60x60}", "{60x60}", "A @x", "@120"):
             self.assertIn(f"Unknown tag or option in pad name: {line}",
                           analyse(set_lines(chip(), "L", [line])).warnings)
 
     def test_valid_lines_are_not_flagged(self):
         for line in ("A", "A[3]", "A [3]", "DOUT[3] [out] [4mA]", "RFOUT [gsg] {70x70} @125", "B [lock]", "---", "NC",
-                     "=== ANA", "", "A {60x60}", "A{60x60}", "A @120", "A@120"):
+                     "=== ANA", "", "A {60x60}", "A{60x60}", "A @120", "A@120",
+                     "A[12]", "D[1][2]", "x[1].y", "A[3]_B"):  # numeric indices, as a LEF pin can have
             warnings = analyse(set_lines(chip(), "L", [line])).warnings
             self.assertFalse(any("Unknown tag" in w for w in warnings), line)
+
+    def test_split_line_needs_a_domain_name_for_rails(self):
+        for line in ("=== A B [p]", "=== D2 @120", "=== A-B", "=== [foo]", "=== Ä"):
+            self.assertIn(f"Power domain name with invalid characters: {line[4:]}",
+                          analyse(set_lines(chip(), "L", ["X", line, "Y"])).warnings)
+        for line in ("=== ANA", "=== ana", "=== 1V8", "=== A_B", "==="):
+            warnings = analyse(set_lines(chip(), "L", ["X", line, "Y"])).warnings
+            self.assertFalse(any("domain name" in w for w in warnings), line)
 
     def test_findings_join_all_sources_once(self):
         p = set_lines(chip(macros=[adc()]), "L", ["VIN_N", "VIN_P"])

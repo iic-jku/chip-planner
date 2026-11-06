@@ -11,11 +11,14 @@ from ..model.project import Project
 
 def load(path):
     """Read a project file. Raises ``OSError`` or ``ValueError``."""
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data, dict) or "sides" not in data:
-        raise ValueError("not a pad ring file")
-    project = Project.from_dict(data)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or "sides" not in data:
+            raise ValueError("not a pad ring file")
+        project = Project.from_dict(data)
+    except (ArithmeticError, AttributeError, RecursionError, TypeError) as e:
+        raise ValueError(f"not a pad ring file: {e}") from e
     base = Path(path).resolve().parent
     for m in project.floorplan.macros:  # macro paths are stored relative to the project file
         if m.path and not Path(m.path).is_absolute():

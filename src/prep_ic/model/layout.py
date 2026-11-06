@@ -103,6 +103,10 @@ def _snap(v, grid):
     return math.floor(v / grid + 1e-9) * grid
 
 
+def _same_size(a, b):
+    return all(math.isclose(x, y, abs_tol=1e-9) for x, y in zip(a, b))
+
+
 def build_layout(project, selected=None):
     """Compute pins, geometry and drawing primitives for a :class:`Project`.
 
@@ -161,9 +165,10 @@ def build_layout(project, selected=None):
         # fixed die incl. IO ring; keep room for at least one pitch between the corners
         e_tb = max(P, dw - 2 * H)
         e_lr = max(P, dh - 2 * H)
-        if (e_tb + 2 * H, e_lr + 2 * H) != (cfg.die_width, cfg.die_height):
-            warnings.append(f"Fixed die size too small for the IO ring, using {e_tb + 2 * H:g} × {e_lr + 2 * H:g} µm"
-                            if (e_tb + 2 * H, e_lr + 2 * H) != (dw, dh) else
+        used = (e_tb + 2 * H, e_lr + 2 * H)
+        if not _same_size(used, (cfg.die_width, cfg.die_height)):
+            warnings.append(f"Fixed die size too small for the IO ring, using {used[0]:g} × {used[1]:g} µm"
+                            if not _same_size(used, (dw, dh)) else
                             f"Fixed die size snapped to the {pdk.site:g} µm grid: {dw:g} × {dh:g} µm")
     else:
         e_tb = max(P, S["T"], S["B"])
