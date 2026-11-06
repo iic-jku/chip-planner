@@ -7,9 +7,8 @@ Planned work on PREP-IC. Each item names the files it touches. Remove an item in
 
 Found on 2026-11-04 by running the exports through LibreLane and the chip templates' `run_bondplan.py`. Fix these before the planned work below.
 
-- [ ] **`prep-ic export` is silent about most problems (`cli.py`).** It prints only `layout.warnings`, and no warning changes the exit code. It never shows `project.load_warnings` (macro LEF gone, marked pin no longer in the LEF) or `analyse()` (crossings, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks). So `examples/chip_demo.json`, which has a crossing and a missing pad by design, exports with exit 0 and no output. Print them in the export, and add a `prep-ic check PROJECT` that lists all of them and exits non-zero on a finding, so scripts and coding agents can rely on it. It should also flag a mistyped tag: `A [foo]` silently becomes a pad named `A [foo]`.
 - [ ] **`macros.yaml` fails lint as exported (`formats/librelane.py`, `macros_yaml`).** It writes only `gds` and `lef`, so Verilator stops with `MODMISSING` for lack of a Verilog view. Adding `vh: [dir::<macro dir>/final/vh/<macro>.vh]` by hand was enough to place the macro at its planned location (checked through `OpenROAD.TapEndcapInsertion`). LibreLane run directories have this file, so export `vh` when it exists, and consider `nl`, `pnl`, `lib` and `spef` the same way.
-- [ ] **The README misleads in two places (`README.md`).** The scripting example says `analyse(project).warnings` holds the crossings, but they are only in `analyse(project).crossings`, so fix the comment or add them to the warnings. The PDK table says "Default pad pitch 100 µm", but a new project stays at 80 µm with a PDK, in the API and in the GUI, because the GUI only raises a pitch below the cell width. Fix the text or the default.
+- [ ] **The README misleads on the pad pitch (`README.md`).** The PDK table says "Default pad pitch 100 µm", but a new project stays at 80 µm with a PDK, in the API and in the GUI, because the GUI only raises a pitch below the cell width. Fix the text or the default.
 
 
 ## Open after the 0.1.1 release

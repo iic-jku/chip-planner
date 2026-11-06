@@ -93,13 +93,13 @@ The code is split into a pure-Python, Qt-free model and exporters (`prep_ic.mode
 │  │  └─ project.py              ring settings and the entry lines of each side
 │  ├─ __init__.py                scripting API and version
 │  ├─ __main__.py                python -m prep_ic
-│  ├─ cli.py                     command line: GUI or export
+│  ├─ cli.py                     command line: GUI, export or check
 │  └─ style.py                   color palettes shared by the GUI and the SVG export
 ├─ 📁 tests/                     unittest suite, the GUI tests run offscreen
 │  ├─ 📁 data/                   layout baseline and a test macro
 │  ├─ test_chip.py               chip view model: analysis and edits of pads and macros
 │  ├─ test_floorplan.py          LEF reading, macro placement and pad generation
-│  ├─ test_formats.py            project files, CSV, SVG, the CLI export, no Qt in the core
+│  ├─ test_formats.py            project files, CSV, SVG, the CLI, no Qt in the core
 │  ├─ test_gui.py                GUI smoke tests
 │  ├─ test_model.py              entry parser, settings, die and core sizing
 │  ├─ test_pdk.py                PDK profiles, IO cells, LibreLane and bondplan exports
@@ -196,7 +196,7 @@ One line per entry. Each side lists its pads as seen on the die: top and bottom 
 | `NAME [lock]` | locked pad: it can no longer be dragged and *Optimize Pad Order* leaves it in place |
 | `=== NAME` | power split: cuts the IO ring here and starts power domain `NAME` |
 
-Options combine: `RFOUT [gsg] {70x70} @125`, `DOUT[3] [out] [4mA]`.
+Options combine: `RFOUT [gsg] {70x70} @125`, `DOUT[3] [out] [4mA]`. An unknown tag stays in the pad name together with the tags left of it, so `A [in] [foo]` is a pad named `A [in] [foo]`. The warning line and `prep-ic check` report it.
 
 ### PDK, package and LibreLane
 
@@ -272,7 +272,8 @@ macro = prep.Macro.from_dir("macros/adc_sar", "adc0")  # reads final/lef/adc_sar
 macro.io = ["VIN_P", "VIN_N"]
 project.floorplan.macros.append(macro)
 prep.add_missing_pads(project)                         # adds VIN_P/VIN_N pads, fixed core mode
-print(prep.analyse(project).warnings)                  # crossings, pairs, analog and power checks
+print(prep.analyse(project).warnings)                  # crossings, tags, pairs, analog and power checks
+print(prep.findings(project))                          # the same plus layout and macro LEF warnings
 
 project.settings.pdk = "ihp-sg13g2"                    # see prep.pdk_names()
 project.settings.package = "OP_QFN32_A4_FIT"           # see prep.package_names()
@@ -302,8 +303,9 @@ The GUI tests run offscreen and are skipped when Qt is not installed.
 | `prep-ic export chip.json --csv pins.csv` | write the pin list as CSV |
 | `prep-ic export chip.json --svg ring.svg` | write the drawing as SVG |
 | `prep-ic export chip.json --librelane DIR` | write the LibreLane files into `DIR` (needs a PDK in the project) |
+| `prep-ic check chip.json` | list the findings of the project |
 
-The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and the layout warnings go to stderr. The export runs without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
+The `export` options combine, e.g. `prep-ic export chip.json --csv pins.csv --svg ring.svg`. Each written LibreLane file is printed, and all findings go to stderr. Exit code 0 from `export` says only that the files were written, so gate a script on `check`: it prints one finding per line or `no findings`, and exits 0 when clean, 1 with findings and 2 when the check did not run. A finding is a layout warning, a macro LEF that is gone, a marked pin no longer in the LEF, an unknown tag, or what `prep.analyse` reports: crossings, pins without a pad, split differential pairs, sensitive pads next to noisy ones, macro and supply checks. Both commands run without Qt. From a source checkout without installing, use `python -m prep_ic` with `src` on the Python path in place of `prep-ic`.
 
 
 ## Supported PDKs and Packages

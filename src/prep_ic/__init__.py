@@ -11,6 +11,7 @@ Scripting API (no Qt needed)::
     project.settings.std.pitch = 90
     layout = project.layout()
     print(layout.die_width, layout.die_height, layout.warnings)
+    print(prep.findings(project))                # everything to report, as in prep-ic check
     prep.export_csv(project, "pins.csv")
     prep.export_svg(project, "ring.svg")
     prep.save(project, "chip.json")
@@ -31,12 +32,12 @@ from .formats.project_file import load, save
 from .formats.svg import export_svg, to_svg
 from .model import (SIDE_NAMES, SIDES, TYPE_NAMES, TYPES, Floorplan, Layout, Macro, PadSettings, Pin,
                     Project, Settings, build_layout)
-from .model.chip import (add_missing_pads, align_macros, analyse, auto_rotate, move_line, optimize_pad_order, place_line,
-                         suggest_supply_pads, toggle_lock)
+from .model.chip import (add_missing_pads, align_macros, analyse, auto_rotate, findings, move_line, optimize_pad_order,
+                         place_line, suggest_supply_pads, toggle_lock)
 from .model.chip import add_missing_pads as generate_pads
 from .model.pdk import get_package, get_pdk, package_names, pdk_names
 
-__all__ = ["APP_NAME", "add_missing_pads", "align_macros", "analyse", "auto_rotate", "move_line",
+__all__ = ["APP_NAME", "add_missing_pads", "align_macros", "analyse", "auto_rotate", "findings", "move_line",
            "optimize_pad_order", "place_line", "suggest_supply_pads", "toggle_lock", "SIDES", "SIDE_NAMES", "TYPES", "TYPE_NAMES", "Floorplan", "Layout", "Macro", "PadSettings",
            "Pin", "Project", "Settings", "build_layout", "export_csv", "export_librelane", "export_svg",
            "generate_pads", "get_package", "get_pdk", "librelane_files", "load", "package_names", "pdk_names",

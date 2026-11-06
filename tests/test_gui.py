@@ -382,6 +382,15 @@ class ChipGui(unittest.TestCase):
         w.render()
         self.assertIn("Macros a and b and adc_sar1 overlap", w.warn.text())
 
+    def test_warning_line_shows_crossings_and_unknown_tags(self):
+        import prep_ic as prep
+        w = self.win
+        w.set_project(prep.load(ROOT / "examples" / "chip_demo.json"))
+        self.assertIn("1 flyline crossing: VIN_P/VIN_N", w.warn.text())
+        w.editors["L"].set_text("A [foo]")
+        w.render()
+        self.assertIn("Unknown tag in pad name: A [foo]", w.warn.text())
+
 
     def test_undo_add_missing_pads(self):
         w = self.win

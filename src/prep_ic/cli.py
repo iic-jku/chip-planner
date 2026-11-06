@@ -4,12 +4,13 @@
 
     prep-ic [PROJECT]
     prep-ic export PROJECT [--csv FILE] [--svg FILE] [--librelane DIR]
+    prep-ic check PROJECT
 """
 
 import argparse
 import sys
 
-from . import APP_NAME, __version__, export_csv, export_librelane, export_svg, load
+from . import APP_NAME, __version__, export_csv, export_librelane, export_svg, findings, load
 
 
 def _export(argv):
@@ -34,17 +35,36 @@ def _export(argv):
     except (OSError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
-    for w in project.layout().warnings:
+    for w in findings(project):
         print(f"warning: {w}", file=sys.stderr)
     return 0
+
+
+def _check(argv):
+    ap = argparse.ArgumentParser(prog="prep-ic check", description="List the problems of a project.",
+                                 epilog="Exit code: 0 no findings, 1 findings, 2 the check did not run.")
+    ap.add_argument("project", help="project file (.json)")
+    args = ap.parse_args(argv)
+    try:
+        found = findings(load(args.project))
+    except Exception as e:  # a traceback would exit 1, which means findings
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    encoding = sys.stdout.encoding or "utf-8"
+    for line in found or ["no findings"]:
+        print(line.encode(encoding, "backslashreplace").decode(encoding))  # a name may not fit the encoding
+    return 1 if found else 0
 
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] == "export":
         return _export(argv[1:])
+    if argv and argv[0] == "check":
+        return _check(argv[1:])
     ap = argparse.ArgumentParser(prog="prep-ic", description=f"{APP_NAME}: plan IC pad ring pinouts.",
-                                 epilog="Subcommand: 'prep-ic export -h' for exports without the GUI.")
+                                 epilog="Subcommands: 'prep-ic export -h' for exports without the GUI, "
+                                        "'prep-ic check -h' to list the problems of a project.")
     ap.add_argument("project", nargs="?", help="project file (.json) to open")
     ap.add_argument("--version", action="version", version=f"{APP_NAME} {__version__}")
     args = ap.parse_args(argv)

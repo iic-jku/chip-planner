@@ -6,7 +6,7 @@ How PREP-IC is built and the rules it follows, for anyone who changes it. The mo
 
 `prep_ic` is one package with a pure-Python core and a thin GUI:
 
-- `model/`, `formats/`, `style.py`, `cli.py` and `__init__.py` import no Qt. `tests/test_formats.py` checks it twice, by a source scan and by an export run that must leave PySide6, PyQt6 and shiboken6 unloaded.
+- `model/`, `formats/`, `style.py`, `cli.py` and `__init__.py` import no Qt. `tests/test_formats.py` checks it twice, by a source scan and by an export and a check run that must leave PySide6, PyQt6 and shiboken6 unloaded.
 - `gui/` imports Qt only through `gui/qt.py` and uses only PySide6-Essentials modules, which `tests/test_qt_essentials.py` enforces together with the `PySide6-Essentials` dependency in `pyproject.toml`. The reason is Essentials-only installs such as the IIC-OSIC-TOOLS image.
 
 A `Project` holds the settings, the entry lines of each side and the `floorplan` (the placed macros). `build_layout(project)` (`model/layout.py`) parses the lines, numbers the pins, sizes the die and returns a `Layout`: pins, power splits and domains, warnings and drawing primitives. The primitives are plain dicts (`k` is `rect`, `line`, `circle` or `text`) that `gui/scene.py` and `formats/svg.py` both render with the styles of `style.py`, so the window and the SVG export show the same picture.
@@ -66,9 +66,12 @@ Per side, the connected unlocked pads keep the set of slots they occupy and are 
 - **Neighbors.** A sensitive pad next to a noisy one on the same side is a warning. A spacer, a split or an RF group between them breaks the adjacency.
 - **Differential pairs** are single-pad lines on one side whose names differ only in a final `P`/`N` (`VIN_P`/`VIN_N`, `INP`/`INN`). They must be adjacent.
 - **Flyline length.** Flylines of sensitive pads longer than *Max analog/RF flyline* (900 µm) are reported. The stat tile shows the longest.
+- **Crossings.** Two flylines that cross are a warning that names their pads, next to the count in the stat tile.
+- **Unknown tags.** A bracket left in a pad name, other than a final bus index like `[3]`, is a tag the parser did not know. The parser stops at it, so the tags left of it stay in the name too.
 - **Macros.** Overlaps, macros outside the core, halos that overlap (the gap between two macro boxes is smaller than the sum of their halos, 20 µm by default per macro) and sensitive and noisy macros closer than *Spacing* (100 µm).
 - **Supplies.** Every macro needs a pad with function `vdd` and one with `vss` of its domain whose inner edge point is within *Max supply distance* (1000 µm) of the macro center. Supplies match by function, not by name, and IO supplies do not count. Without splits every pad is in the one domain.
 - **Suggest Supply Pads** adds one pad at a time, next to the pad of the domain that is closest to the macro, on the macro's side of it. The pad is named after the macro's LEF power pin, else `VDD`/`VSS` (`VDD_<DOMAIN>` with splits), and gets an explicit `[vdd]`/`[vss]` tag. It repeats until no macro misses a supply, since one new pad can serve several macros, and tries each macro and kind once.
+- **Findings.** `findings(project)` joins the layout warnings, the warnings from reading the macro LEFs and `analyse`. `prep-ic export` prints them and still exits 0, since the files were written. `prep-ic check` lists them and exits 0 when clean, 1 with findings and 2 when the check did not run, also on an unexpected exception, because a traceback would exit 1 and read as findings.
 
 ## Power domains
 

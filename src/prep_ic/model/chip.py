@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .constants import SIDES
 from .floorplan import _function, _overlap, core_area, floorplan_warnings, nearest_side
-from .parse import parse_line
+from .parse import has_unknown_tag, parse_line
 
 Point = Tuple[float, float]
 
@@ -217,11 +217,13 @@ def analyse(project, layout=None) -> ChipCheck:
                                               _inner_point(layout, side, along)))
 
     fl = out.flylines
+    crossed = []
     for i, a in enumerate(fl):
         for b in fl[i + 1:]:
             if _cross(a, b):
                 a.crossing = b.crossing = True
                 out.crossings += 1
+                crossed.append(f"{a.pad}/{b.pad}")
     sens = [f for f in fl if f.sensitive]
     out.longest = max(sens, key=lambda f: f.length) if sens else None
 
@@ -229,6 +231,8 @@ def analyse(project, layout=None) -> ChipCheck:
     for s in SIDES:
         lines = project.physical_lines(s)
         entries = [parse_line(l) for l in lines]
+        out.warnings += [f"Unknown tag in pad name: {e['name']}" for e in entries
+                         if e and not e["split"] and has_unknown_tag(e["name"])]
         single = {e["name"]: i for i, e in enumerate(entries) if e and not e["split"] and not e["group"]}
         for n, i in single.items():
             q = diff_partner(n)
@@ -275,10 +279,18 @@ def analyse(project, layout=None) -> ChipCheck:
             dom = m.domain if splits and m.domain else "ring"
             out.warnings.append(f"{m.name}: no {kind} pad of domain {dom} within {st.max_supply_dist:g} µm")
             out.supplies.append(_suggest(project, layout, m, function, dom_pins, (cx, cy), splits))
+    if crossed:
+        out.warnings.append(f"{len(crossed)} flyline crossing{'s' if len(crossed) > 1 else ''}: " + ", ".join(crossed))
     if out.missing:
         out.warnings.append(f"{len(out.missing)} checked pins without pad: "
                             + ", ".join(x.name for x in out.missing))
     return out
+
+
+def findings(project) -> List[str]:
+    """Everything to report on a project: layout warnings, warnings from reading its files, :func:`analyse`."""
+    layout = project.layout()
+    return list(dict.fromkeys(layout.warnings + project.load_warnings + analyse(project, layout).warnings))
 
 
 def _suggest(project, layout, m, function, dom_pins, centre, splits) -> SupplySuggestion:
