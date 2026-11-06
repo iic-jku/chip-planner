@@ -69,7 +69,7 @@ def main(argv=None):
     ap.add_argument("--version", action="version", version=f"{APP_NAME} {__version__}")
     args = ap.parse_args(argv)
     try:
-        from .gui import run
+        from .gui import qt, run  # gui itself imports lazily, qt raises the install advice
     except ImportError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

@@ -141,6 +141,19 @@ class NoQtOutsideGui(unittest.TestCase):
                            env=child_env())
         self.assertEqual(r.returncode, 0, r.stderr)
 
+    def test_gui_start_without_qt_is_a_clean_error(self):
+        code = (
+            "import sys\n"
+            "sys.modules.update({'PySide6': None, 'PyQt6': None})\n"  # blocks them where Qt is installed
+            "import prep_ic.cli as cli\n"
+            "sys.exit(cli.main([]))\n"
+        )
+        r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT,
+                           env=child_env())
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertIn("error: Qt is missing", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+
     def test_no_qt_import_in_source(self):
         src = ROOT / "src" / "prep_ic"
         for path in src.rglob("*.py"):
