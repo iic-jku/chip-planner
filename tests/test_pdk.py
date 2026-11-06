@@ -193,6 +193,9 @@ class MacroExport(unittest.TestCase):
         for text in (macros_yaml(p, p.layout()), librelane_files(p)["macros.yaml"]):  # the GUI's preview
             self.assertIn(f'    gds: ["{d}/final/gds/adc_sar_top.gds"]\n', text)
             self.assertNotIn("dir::", text)
+        p.floorplan.macros[0].path = "some/relative/dir"  # as a script can set it
+        self.assertIn(f'    gds: ["{Path.cwd().resolve().as_posix()}/some/relative/dir/final/gds/adc_sar_top.gds"]\n',
+                      macros_yaml(p, p.layout()))
 
     def test_macros_yaml_paths_on_another_drive_are_absolute(self):
         from unittest import mock
@@ -221,7 +224,7 @@ class MacroExport(unittest.TestCase):
             return macros_yaml(p, p.layout(), out_dir=d)
 
     def test_macros_yaml_quotes_paths(self):
-        for directory in ("br[ack]et", "cu{r}ly", "com,ma", "ha #sh"):  # none of them survive a plain YAML scalar
+        for directory in ("br[ack]et", "cu{r}ly", "com,ma", "ha #sh", "smile😀"):  # none survive a plain YAML scalar
             text = self.run_dir_yaml(["vh/m.vh", "lib/nom/m__nom.lib"], directory)
             self.assertIn(f'    gds: ["dir::{directory}/final/gds/m.gds"]\n', text)
             self.assertIn(f'    vh: ["dir::{directory}/final/vh/m.vh"]\n', text)

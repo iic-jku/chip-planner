@@ -415,11 +415,10 @@ def macros_yaml(project, layout, out_dir=None, source=""):
         # Quoted, since a directory name may hold [ , or #. dir:: would prefix an absolute path.
         if out_dir is not None:
             try:
-                return json.dumps("dir::" + Path(os.path.relpath(Path(path).resolve(), Path(out_dir).resolve())).as_posix(),
-                                  ensure_ascii=False)
+                return json.dumps("dir::" + Path(os.path.relpath(path, Path(out_dir).resolve())).as_posix(), ensure_ascii=False)
             except ValueError:  # other drive
                 pass
-        return json.dumps(Path(path).resolve().as_posix(), ensure_ascii=False)
+        return json.dumps(Path(path).as_posix(), ensure_ascii=False)
 
     out = _header("#", layout, pdk, source)
     out += ["# Macro placement for the LibreLane config.yaml (flow: Chip). The macros are",
@@ -430,7 +429,7 @@ def macros_yaml(project, layout, out_dir=None, source=""):
             continue
         groups.setdefault((m.macro, m.path), []).append(m)
     for (name, path), ms in groups.items():
-        final = Path(path) / "final"
+        final = Path(path).resolve() / "final"
         out += [f"  {name}:", f"    gds: [{path_value(final / 'gds' / f'{name}.gds')}]",
                 f"    lef: [{path_value(final / 'lef' / f'{name}.lef')}]"]
         out += _macro_views(name, final, path_value)

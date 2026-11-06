@@ -150,6 +150,8 @@ class ProjectApi(unittest.TestCase):
         p.settings.fixed_die = True
         p.settings.die_width, p.settings.die_height, p.settings.cell_height = 1019.4, 1019.4, 102.6  # rounds in floats
         self.assertEqual(p.layout().warnings, [])
+        p.settings.die_width = 2 * 102.6 + p.settings.std.pitch - 0.001  # just below the minimum is still too small
+        self.assertTrue(p.layout().warnings[0].startswith("Fixed die size too small"))
 
     def test_fixed_core_is_minimum(self):
         p = prep.Project(sides={"L": ["A"]})

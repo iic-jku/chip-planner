@@ -15,8 +15,9 @@ from . import APP_NAME, __version__, export_csv, export_librelane, export_svg, f
 
 def _print(text):
     """``print`` for text with names or paths, which may not fit the encoding of the output."""
-    encoding = sys.stdout.encoding or "utf-8"
-    print(text.encode(encoding, "backslashreplace").decode(encoding))
+    if sys.stdout is not None:
+        encoding = sys.stdout.encoding or "utf-8"
+        print(text.encode(encoding, "backslashreplace").decode(encoding))
 
 
 def _export(argv):
@@ -53,11 +54,16 @@ def _check(argv):
     args = ap.parse_args(argv)
     try:
         found = findings(load(args.project))
+    except Exception as e:  # a traceback would exit 1, which means findings
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    try:
         for line in found or ["no findings"]:
             _print(line)
         sys.stdout.flush()
-    except Exception as e:  # a traceback would exit 1, which means findings
+    except Exception as e:
         print(f"error: {e}", file=sys.stderr)
+        sys.stdout = None  # the flush at exit would fail too and turn the code into 120
         return 2
     return 1 if found else 0
 

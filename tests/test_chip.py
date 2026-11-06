@@ -79,7 +79,7 @@ class AnalyseTests(unittest.TestCase):
         self.assertIn("3 flyline crossings: VIN_P/VIN_N, VIN_P/CLK, VIN_N/CLK", c.warnings)
 
     def test_unknown_tags_and_options(self):
-        for line in ("A [foo]", "A [in] [foo]", "D [foo-bar]", "A [in", "A]", "A[3] [foo]", "A[]", "A[x]",
+        for line in ("A [foo]", "A [in] [foo]", "D [foo-bar]", "A [in", "A]", "A[3] [foo]", "A[]", "A[x]", "A[１]",
                      "A {60x}", "A {60x", "A 60x60}", "{60x60}", "A @x", "@120"):
             self.assertIn(f"Unknown tag or option in pad name: {line}",
                           analyse(set_lines(chip(), "L", [line])).warnings)
@@ -92,10 +92,10 @@ class AnalyseTests(unittest.TestCase):
             self.assertFalse(any("Unknown tag" in w for w in warnings), line)
 
     def test_split_line_needs_a_domain_name_for_rails(self):
-        for line in ("=== A B [p]", "=== D2 @120", "=== A-B", "=== [foo]"):
+        for line in ("=== A B [p]", "=== D2 @120", "=== A-B", "=== [foo]", "=== Ä"):
             self.assertIn(f"Power domain name with invalid characters: {line[4:]}",
                           analyse(set_lines(chip(), "L", ["X", line, "Y"])).warnings)
-        for line in ("=== ANA", "=== 1V8", "=== A_B", "==="):
+        for line in ("=== ANA", "=== ana", "=== 1V8", "=== A_B", "==="):
             warnings = analyse(set_lines(chip(), "L", ["X", line, "Y"])).warnings
             self.assertFalse(any("domain name" in w for w in warnings), line)
 

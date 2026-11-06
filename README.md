@@ -324,7 +324,7 @@ The PDK profiles are taken from the IO cell LEF and the LibreLane IO config of t
 | Core margin (core power ring) | 45 µm | 45 µm |
 | Power split gap and filler | 10 µm, `sg13g2_Filler2000` | 10 µm, `sg13cmos5l_Filler2000` |
 
-A new project starts standard pads at the minimum pitch and RF pads at 100 µm. Selecting a PDK in the GUI raises a smaller pitch to 100 µm.
+A new project starts standard pads at the minimum pitch and RF pads at 100 µm. Selecting a PDK in the GUI raises a pitch below the minimum to 100 µm.
 
 The IO function of a pad selects its cell (`<lib>` is `sg13g2` or `sg13cmos5l`):
 

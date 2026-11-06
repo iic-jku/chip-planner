@@ -124,6 +124,26 @@ class CommandLine(unittest.TestCase):
             self.assertIn("error:", r.stderr)
             self.assertNotIn("Traceback", r.stderr)
 
+    def test_check_output_to_a_closed_pipe_exits_2(self):
+        read, write = os.pipe()
+        os.close(read)
+        try:
+            r = subprocess.run([sys.executable, "-m", "prep_ic", "check", "examples/padring.json"], stdout=write,
+                               stderr=subprocess.PIPE, text=True, cwd=ROOT, env=child_env(), timeout=120)
+        finally:
+            os.close(write)
+        self.assertEqual(r.returncode, 2, r.stderr)  # not 1 for findings, not 120 from the flush at exit
+        self.assertIn("error:", r.stderr)
+
+    def test_export_without_a_stdout_succeeds(self):
+        code = ("import sys\nimport prep_ic.cli as cli\nsys.stdout = None\n"
+                "sys.exit(cli.main(['export', 'examples/ihp_sg13g2_domains.json', '--librelane', sys.argv[1]]))\n")
+        with tempfile.TemporaryDirectory() as d:
+            r = subprocess.run([sys.executable, "-c", code, d], capture_output=True, text=True, cwd=ROOT,
+                               env=child_env(), timeout=120)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue(Path(d, "chip_top.sv").exists())
+
     def test_check_without_a_stdout_encoding(self):
         code = ("import io, sys\nimport prep_ic.cli as cli\nsys.stdout = out = io.StringIO()\n"
                 "rc = cli.main(['check', 'examples/padring.json'])\nsys.stderr.write(f'{rc} {out.getvalue()}')\n")
@@ -141,13 +161,15 @@ class CommandLine(unittest.TestCase):
 
     def test_export_malformed_project_is_a_clean_error(self):
         with tempfile.TemporaryDirectory() as d:
-            path = Path(d, "sides.json")
-            path.write_text('{"sides": 3}', encoding="utf-8")
-            r = self.run_cli("export", str(path), "--csv", str(Path(d, "p.csv")))
-            self.assertRaises(ValueError, prep.load, path)
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("error:", r.stderr)
-        self.assertNotIn("Traceback", r.stderr)
+            for name, text in (("attribute.json", '{"sides": 3}'), ("type.json", '{"sides": {}, "std": 3}'),
+                               ("overflow.json", '{"sides": {}, "pitch": 1e999}'), ("nesting.json", "[" * 200000)):
+                path = Path(d, name)
+                path.write_text(text, encoding="utf-8")
+                self.assertRaises(ValueError, prep.load, path)
+                r = self.run_cli("export", str(path), "--csv", str(Path(d, "p.csv")))
+                self.assertEqual(r.returncode, 1, name)
+                self.assertIn("error:", r.stderr)
+                self.assertNotIn("Traceback", r.stderr)
 
     def test_check_name_outside_the_output_encoding(self):
         with tempfile.TemporaryDirectory() as d:

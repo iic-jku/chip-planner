@@ -58,7 +58,7 @@ SIZE_RE = re.compile(r"\s*\{\s*" + _NUM + r"\s*[x×*]\s*" + _NUM + r"\s*\}\s*$",
 PITCH_RE = re.compile(r"\s*@\s*" + _NUM + r"\s*$")
 TAG_RE = re.compile(r"\s*\[([A-Za-z0-9]+)\]\s*$")
 DRIVE_RE = re.compile(r"(\d+)ma", re.I)
-BUS_INDEX_RE = re.compile(r"\[\d+\]")
+BUS_INDEX_RE = re.compile(r"\[[0-9]+\]")
 TYPE_TAGS = {"pwr": "p", "gnd": "g", "ana": "a", "rf": "rf", "dig": "d", "clk": "c", "nc": "nc"}
 FUNCTION_TYPES = {"vdd": "pwr", "iovdd": "pwr", "vss": "gnd", "iovss": "gnd", "analog": "ana", "none": "nc"}
 
