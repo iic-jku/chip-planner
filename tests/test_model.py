@@ -145,6 +145,12 @@ class ProjectApi(unittest.TestCase):
         self.assertIn("Pads do not fit on the left side: 720 µm needed, 80 µm available", lay.warnings)
         self.assertIn("Pads do not fit on the top side: 740 µm needed, 460 µm available", lay.warnings)
 
+    def test_fixed_die_that_fits_is_not_too_small(self):
+        p = prep.Project(sides={"L": ["A"], "T": [], "R": [], "B": []})
+        p.settings.fixed_die = True
+        p.settings.die_width, p.settings.die_height, p.settings.cell_height = 1019.4, 1019.4, 102.6  # rounds in floats
+        self.assertEqual(p.layout().warnings, [])
+
     def test_fixed_core_is_minimum(self):
         p = prep.Project(sides={"L": ["A"]})
         p.settings.fixed_core, p.settings.square = True, False
