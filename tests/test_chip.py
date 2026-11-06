@@ -67,8 +67,36 @@ class AnalyseTests(unittest.TestCase):
         c = analyse(p)
         self.assertEqual(c.crossings, 1)
         self.assertTrue(all(f.crossing for f in c.flylines))
+        self.assertIn("1 flyline crossing: VIN_P/VIN_N", c.warnings)
         set_lines(p, "L", ["VIN_P", "VIN_N"])
         self.assertEqual(analyse(p).crossings, 0)
+        self.assertFalse(any("crossing" in w for w in analyse(p).warnings))
+
+    def test_several_crossings_are_listed(self):
+        p = set_lines(chip(macros=[adc(io=("VIN_P", "VIN_N", "CLK"))]), "L", ["CLK", "VIN_N", "VIN_P"])
+        c = analyse(p)
+        self.assertEqual(c.crossings, 3)
+        self.assertIn("3 flyline crossings: VIN_P/VIN_N, VIN_P/CLK, VIN_N/CLK", c.warnings)
+
+    def test_unknown_tags(self):
+        for line in ("A [foo]", "A [in] [foo]", "D [foo-bar]", "A [in", "A]", "A[3] [foo]"):
+            self.assertIn(f"Unknown tag in pad name: {line}", analyse(set_lines(chip(), "L", [line])).warnings)
+
+    def test_valid_lines_are_no_unknown_tags(self):
+        for line in ("A", "A[3]", "A [3]", "DOUT[3] [out] [4mA]", "RFOUT [gsg] {70x70} @125", "B [lock]", "---", "NC",
+                     "=== ANA", ""):
+            warnings = analyse(set_lines(chip(), "L", [line])).warnings
+            self.assertFalse(any("Unknown tag" in w for w in warnings), line)
+
+    def test_findings_join_all_sources_once(self):
+        p = set_lines(chip(macros=[adc()]), "L", ["VIN_N", "VIN_P"])
+        p.settings.package = "NO_SUCH_PACKAGE"
+        p.load_warnings = ["No LEF found for a0", "1 flyline crossing: VIN_P/VIN_N"]
+        found = prep.findings(p)
+        self.assertIn("Unknown package 'NO_SUCH_PACKAGE'", found)  # layout
+        self.assertIn("No LEF found for a0", found)  # reading the file
+        self.assertEqual(found.count("1 flyline crossing: VIN_P/VIN_N"), 1)  # analyse, also among the above
+        self.assertEqual(prep.findings(set_lines(chip(), "L", ["A"])), [])
 
     def test_missing_pin(self):
         p = set_lines(chip(macros=[adc(x=0.0)]), "L", ["VIN_P"])

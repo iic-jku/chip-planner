@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 import csv
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -60,9 +61,9 @@ class Exports(unittest.TestCase):
 
 
 class CommandLine(unittest.TestCase):
-    def run_cli(self, *args):
+    def run_cli(self, *args, **env):
         return subprocess.run([sys.executable, "-m", "prep_ic", *args], capture_output=True, text=True,
-                              cwd=ROOT, env=child_env())
+                              cwd=ROOT, env={**child_env(), **env})
 
     def test_export(self):
         with tempfile.TemporaryDirectory() as d:
@@ -74,6 +75,50 @@ class CommandLine(unittest.TestCase):
         r = self.run_cli("export", "does-not-exist.json", "--csv", "x.csv")
         self.assertEqual(r.returncode, 1)
         self.assertIn("error:", r.stderr)
+
+    def test_export_prints_findings_and_exits_0(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = self.run_cli("export", "examples/chip_demo.json", "--csv", f"{d}/p.csv")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue(Path(d, "p.csv").exists())
+        self.assertIn("warning: 1 flyline crossing: VIN_P/VIN_N", r.stderr)
+        self.assertIn("warning: 1 checked pins without pad: CLK", r.stderr)
+
+    def test_check_clean(self):
+        for project in ("examples/padring.json", "examples/ihp_sg13g2_domains.json"):
+            r = self.run_cli("check", project)
+            self.assertEqual((r.returncode, r.stdout.strip()), (0, "no findings"), r.stderr)
+
+    def test_check_findings(self):
+        r = self.run_cli("check", "examples/chip_demo.json")
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertEqual(r.stdout.splitlines(), ["1 flyline crossing: VIN_P/VIN_N", "1 checked pins without pad: CLK"])
+
+    def test_check_reports_a_lost_lef(self):
+        with tempfile.TemporaryDirectory() as d:
+            shutil.copy(ROOT / "examples" / "chip_demo.json", d)  # its macro paths no longer resolve
+            r = self.run_cli("check", str(Path(d, "chip_demo.json")))
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertIn("No LEF found for adc_sar0", r.stdout)
+
+    def test_check_that_did_not_run_is_no_finding(self):
+        with tempfile.TemporaryDirectory() as d:
+            for name, text in (("text.json", "not json"), ("list.json", "[]"), ("sides.json", '{"sides": 3}')):
+                Path(d, name).write_text(text, encoding="utf-8")
+                r = self.run_cli("check", str(Path(d, name)))
+                self.assertEqual(r.returncode, 2, name)
+                self.assertIn("error:", r.stderr)
+                self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual(self.run_cli("check", "does-not-exist.json").returncode, 2)
+        self.assertEqual(self.run_cli("check").returncode, 2)  # no project given
+
+    def test_check_name_outside_the_output_encoding(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d, "chip.json")
+            prep.save(prep.Project(sides={"L": ["Ä [foo]"], "T": [], "R": [], "B": []}), path)
+            r = self.run_cli("check", str(path), PYTHONIOENCODING="ascii")
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertIn("Unknown tag in pad name: \\xc4 [foo]", r.stdout)
 
 
 class NoQtOutsideGui(unittest.TestCase):
@@ -87,6 +132,7 @@ class NoQtOutsideGui(unittest.TestCase):
             "d = tempfile.mkdtemp()\n"
             "assert cli.main(['export', 'examples/padring.json', '--csv', os.path.join(d, 'a.csv'),"
             " '--svg', os.path.join(d, 'a.svg')]) == 0\n"
+            "assert cli.main(['check', 'examples/padring.json']) == 0\n"
             "bad = [m for m in sys.modules if m.split('.')[0] in ('PySide6', 'PyQt6', 'shiboken6')"
             " or m.startswith('prep_ic.gui.')]\n"
             "assert not bad, bad\n"
