@@ -13,6 +13,12 @@ import sys
 from . import APP_NAME, __version__, export_csv, export_librelane, export_svg, findings, load
 
 
+def _print(text):
+    """``print`` for text with names or paths, which may not fit the encoding of the output."""
+    encoding = sys.stdout.encoding or "utf-8"
+    print(text.encode(encoding, "backslashreplace").decode(encoding))
+
+
 def _export(argv):
     ap = argparse.ArgumentParser(prog="prep-ic export", description="Export a project without the GUI.")
     ap.add_argument("project", help="project file (.json)")
@@ -31,7 +37,7 @@ def _export(argv):
             export_svg(project, args.svg)
         if args.librelane:
             for path in export_librelane(project, args.librelane, source=args.project):
-                print(f"wrote {path}")
+                _print(f"wrote {path}")
     except (OSError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
@@ -47,12 +53,12 @@ def _check(argv):
     args = ap.parse_args(argv)
     try:
         found = findings(load(args.project))
+        for line in found or ["no findings"]:
+            _print(line)
+        sys.stdout.flush()
     except Exception as e:  # a traceback would exit 1, which means findings
         print(f"error: {e}", file=sys.stderr)
         return 2
-    encoding = sys.stdout.encoding or "utf-8"
-    for line in found or ["no findings"]:
-        print(line.encode(encoding, "backslashreplace").decode(encoding))  # a name may not fit the encoding
     return 1 if found else 0
 
 

@@ -62,8 +62,9 @@ class Exports(unittest.TestCase):
 
 class CommandLine(unittest.TestCase):
     def run_cli(self, *args, **env):
+        # the timeout ends a GUI that a broken subcommand dispatch would start
         return subprocess.run([sys.executable, "-m", "prep_ic", *args], capture_output=True, text=True,
-                              cwd=ROOT, env={**child_env(), **env})
+                              cwd=ROOT, env={**child_env(), **env}, timeout=120)
 
     def test_export(self):
         with tempfile.TemporaryDirectory() as d:
@@ -111,6 +112,42 @@ class CommandLine(unittest.TestCase):
                 self.assertNotIn("Traceback", r.stderr)
         self.assertEqual(self.run_cli("check", "does-not-exist.json").returncode, 2)
         self.assertEqual(self.run_cli("check").returncode, 2)  # no project given
+
+    def test_check_output_failure_is_no_finding(self):
+        broken = "class S(io.StringIO):\n    def write(self, text):\n        raise OSError('closed')\nsys.stdout = S()\n"
+        for setup in (broken, "sys.stdout = None\n"):
+            code = ("import io, sys\nimport prep_ic.cli as cli\n" + setup
+                    + "sys.exit(cli.main(['check', 'examples/padring.json']))\n")
+            r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT,
+                               env=child_env(), timeout=120)
+            self.assertEqual(r.returncode, 2, r.stderr)
+            self.assertIn("error:", r.stderr)
+            self.assertNotIn("Traceback", r.stderr)
+
+    def test_check_without_a_stdout_encoding(self):
+        code = ("import io, sys\nimport prep_ic.cli as cli\nsys.stdout = out = io.StringIO()\n"
+                "rc = cli.main(['check', 'examples/padring.json'])\nsys.stderr.write(f'{rc} {out.getvalue()}')\n")
+        r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT,
+                           env=child_env(), timeout=120)
+        self.assertEqual(r.stderr.strip(), "0 no findings")
+
+    def test_export_path_outside_the_output_encoding(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = self.run_cli("export", "examples/ihp_sg13g2_domains.json", "--librelane", str(Path(d, "Ω")),
+                             PYTHONIOENCODING="ascii")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.count("wrote "), 5)
+        self.assertIn("\\u03a9", r.stdout)
+
+    def test_export_malformed_project_is_a_clean_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d, "sides.json")
+            path.write_text('{"sides": 3}', encoding="utf-8")
+            r = self.run_cli("export", str(path), "--csv", str(Path(d, "p.csv")))
+            self.assertRaises(ValueError, prep.load, path)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("error:", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
 
     def test_check_name_outside_the_output_encoding(self):
         with tempfile.TemporaryDirectory() as d:

@@ -15,7 +15,10 @@ def load(path):
         data = json.load(f)
     if not isinstance(data, dict) or "sides" not in data:
         raise ValueError("not a pad ring file")
-    project = Project.from_dict(data)
+    try:
+        project = Project.from_dict(data)
+    except (AttributeError, KeyError, TypeError) as e:
+        raise ValueError(f"not a pad ring file: {e}") from e
     base = Path(path).resolve().parent
     for m in project.floorplan.macros:  # macro paths are stored relative to the project file
         if m.path and not Path(m.path).is_absolute():
