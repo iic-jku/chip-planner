@@ -7,7 +7,6 @@ Planned work on PREP-IC. Each item names the files it touches. Remove an item in
 
 Found on 2026-11-04 by running the exports through LibreLane and the chip templates' `run_bondplan.py`. Fix these before the planned work below.
 
-- [ ] **`macros.yaml` fails lint as exported (`formats/librelane.py`, `macros_yaml`).** It writes only `gds` and `lef`, so Verilator stops with `MODMISSING` for lack of a Verilog view. Adding `vh: [dir::<macro dir>/final/vh/<macro>.vh]` by hand was enough to place the macro at its planned location (checked through `OpenROAD.TapEndcapInsertion`). LibreLane run directories have this file, so export `vh` when it exists, and consider `nl`, `pnl`, `lib` and `spef` the same way.
 - [ ] **The README misleads on the pad pitch (`README.md`).** The PDK table says "Default pad pitch 100 µm", but a new project stays at 80 µm with a PDK, in the API and in the GUI, because the GUI only raises a pitch below the cell width. Fix the text or the default.
 
 

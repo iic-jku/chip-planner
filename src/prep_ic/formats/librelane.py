@@ -371,6 +371,27 @@ def chip_core_template_sv(layout, source="", core_module="chip_core", macros=())
 
 CORE_INSTANCE = "i_chip_core"  # instance name of the core in chip_top.sv
 ORIENTATION = {0: "N", 90: "E", 180: "S", 270: "W"}  # clockwise rotation in the planner
+# Views of a LibreLane run directory. Lint takes the first of vh, pnl and nl that a macro has.
+VERILOG_VIEWS = (("vh", "{}.vh"), ("nl", "{}.nl.v"), ("pnl", "{}.pnl.v"))
+# view, key, file. LibreLane names a view's folder key.strip("_*"), so the key "nom_*" lives in spef/nom.
+CORNER_VIEWS = (("lib", "{corner}", "{name}__{corner}.lib"), ("spef", "{corner}_*", "{name}.{corner}.spef"))
+
+
+def _macro_views(name, path, d):
+    """``MACROS`` lines of the views found in a run directory, ``d`` being its path as written."""
+    final = Path(path) / "final"
+    out = [f"    {view}: [dir::{d}/final/{view}/{file.format(name)}]" for view, file in VERILOG_VIEWS
+           if (final / view / file.format(name)).is_file()]
+    if not out:
+        out.append("    # no vh, pnl or nl in final/, so lint stops with MODMISSING")
+    for view, key, file in CORNER_VIEWS:
+        corners = sorted(c.name for c in (final / view).glob("*")
+                         if (c / file.format(name=name, corner=c.name)).is_file())
+        if corners:
+            out.append(f"    {view}:")
+            out += [f"      {key.format(corner=c)}: [dir::{d}/final/{view}/{c}/{file.format(name=name, corner=c)}]"
+                    for c in corners]
+    return out
 
 
 def _num(v):
@@ -380,7 +401,7 @@ def _num(v):
 
 
 def macros_yaml(project, layout, out_dir=None, source=""):
-    """``MACROS`` part of the LibreLane config: LEF/GDS per macro and the placed instances.
+    """``MACROS`` part of the LibreLane config: LEF, GDS and the views found per macro, and the placed instances.
 
     Locations are the lower-left corners of the placed macros in die coordinates (origin
     lower-left); paths are relative to ``out_dir`` (the directory of the config) when given.
@@ -407,8 +428,9 @@ def macros_yaml(project, layout, out_dir=None, source=""):
         groups.setdefault((m.macro, m.path), []).append(m)
     for (name, path), ms in groups.items():
         d = rel(path)
-        out += [f"  {name}:", f"    gds: [dir::{d}/final/gds/{name}.gds]", f"    lef: [dir::{d}/final/lef/{name}.lef]",
-                "    instances:"]
+        out += [f"  {name}:", f"    gds: [dir::{d}/final/gds/{name}.gds]", f"    lef: [dir::{d}/final/lef/{name}.lef]"]
+        out += _macro_views(name, path, d)
+        out.append("    instances:")
         for m in ms:
             w, h = m.size()
             out += [f"      {CORE_INSTANCE}.{m.name}:",
